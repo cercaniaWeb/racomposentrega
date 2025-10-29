@@ -1,54 +1,41 @@
 import React from 'react';
 import useAppStore from '../../store/useAppStore';
 
-const Button = ({ children, onClick, className = '', variant = 'primary', size = 'md' }) => {
+const Button = ({ children, onClick, className = '', variant = 'primary', size = 'md', disabled = false }) => {
   const { darkMode } = useAppStore();
   
   // Tamaños
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'px-3 py-2 text-sm rounded-lg',
+    md: 'px-4 py-3 text-base rounded-lg',
+    lg: 'px-6 py-4 text-lg rounded-xl',
   };
   
-  // Define button variants based on theme
+  // Define button variants - now always uses dark mode styles
   const getButtonClass = () => {
-    let baseClass = `${sizeClasses[size]} rounded-lg font-semibold transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 `;
+    let baseClass = `${sizeClasses[size]} font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 `;
     
-    if (darkMode) {
-      switch (variant) {
-        case 'primary':
-          return baseClass + 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'secondary':
-          return baseClass + 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'success':
-          return baseClass + 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'danger':
-          return baseClass + 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'outline':
-          return baseClass + 'bg-transparent border-2 border-blue-500 text-blue-400 hover:bg-blue-500/10 shadow-lg hover:shadow-xl ' + className;
-        case 'ghost':
-          return baseClass + 'bg-transparent text-gray-300 hover:bg-gray-700/50 ' + className;
-        default:
-          return baseClass + className;
-      }
+    if (disabled) {
+      baseClass += 'opacity-50 cursor-not-allowed ';
     } else {
-      switch (variant) {
-        case 'primary':
-          return baseClass + 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'secondary':
-          return baseClass + 'bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-800 shadow-lg hover:shadow-xl ' + className;
-        case 'success':
-          return baseClass + 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'danger':
-          return baseClass + 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl ' + className;
-        case 'outline':
-          return baseClass + 'bg-transparent border-2 border-blue-500 text-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl ' + className;
-        case 'ghost':
-          return baseClass + 'bg-transparent text-gray-700 hover:bg-gray-100 ' + className;
-        default:
-          return baseClass + className;
-      }
+      baseClass += 'cursor-pointer hover:opacity-90 active:scale-[0.98] ';
+    }
+    
+    switch (variant) {
+      case 'primary':
+        return baseClass + 'bg-[#7c4dff] text-white hover:bg-[#5b2ecb] shadow-card ' + className;
+      case 'secondary':
+        return baseClass + 'bg-[#2c2c2c] text-[#c0c0c0] border border-[#404040] hover:bg-[#404040] shadow-card ' + className;
+      case 'success':
+        return baseClass + 'bg-[#00c853] text-white hover:bg-[#00a844] shadow-card ' + className;
+      case 'danger':
+        return baseClass + 'bg-[#ff5252] text-white hover:bg-[#e04040] shadow-card ' + className;
+      case 'outline':
+        return baseClass + 'bg-transparent border border-[#7c4dff] text-[#7c4dff] hover:bg-[#7c4dff]/10 shadow-card ' + className;
+      case 'ghost':
+        return baseClass + 'bg-transparent text-[#c0c0c0] hover:bg-[#2c2c2c] ' + className;
+      default:
+        return baseClass + className;
     }
   };
 
@@ -56,6 +43,7 @@ const Button = ({ children, onClick, className = '', variant = 'primary', size =
     <button
       onClick={onClick}
       className={getButtonClass()}
+      disabled={disabled}
     >
       {children}
     </button>

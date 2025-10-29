@@ -31,14 +31,53 @@ export const getProduct = async (id) => {
 };
 
 export const addProduct = async (productData) => {
+  // Copiar los datos del producto sin modificar el original
+  const mappedProductData = { ...productData };
+
+  // Mapear campos del formulario a los campos correctos de la base de datos
+  if ('categoryId' in mappedProductData) {
+    mappedProductData.category_id = mappedProductData.categoryId;
+    delete mappedProductData.categoryId;
+  }
+  if ('subcategoryId' in mappedProductData) {
+    mappedProductData.subcategory_id = mappedProductData.subcategoryId;
+    delete mappedProductData.subcategoryId;
+  }
+  if ('unitOfMeasure' in mappedProductData) {
+    mappedProductData.unit = mappedProductData.unitOfMeasure;
+    delete mappedProductData.unitOfMeasure;
+  }
+  if ('image' in mappedProductData) {
+    mappedProductData.image_url = mappedProductData.image;
+    delete mappedProductData.image;
+  }
+  if ('expirationDate' in mappedProductData) {
+    delete mappedProductData.expirationDate; // Este campo no existe en la base de datos de productos
+  }
+  if ('createdAt' in mappedProductData) {
+    delete mappedProductData.createdAt; // Eliminar, ya que se establece automáticamente
+  }
+  if ('updatedAt' in mappedProductData) {
+    delete mappedProductData.updatedAt; // Eliminar, ya que se establece automáticamente
+  }
+  if ('created_at' in mappedProductData) {
+    delete mappedProductData.created_at; // Eliminar, ya que se establece automáticamente
+  }
+  if ('updated_at' in mappedProductData) {
+    delete mappedProductData.updated_at; // Eliminar, ya que se establece automáticamente
+  }
+  if ('wholesalePrice' in mappedProductData) {
+    delete mappedProductData.wholesalePrice; // Este campo no existe en la base de datos
+  }
+
+  // Agregar campos automáticos
+  mappedProductData.created_at = new Date().toISOString();
+  mappedProductData.updated_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from('products')
-    .insert([{
-      ...productData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }])
-    .select()
+    .insert([mappedProductData])
+    .select('id')
     .single();
 
   if (error) {
@@ -50,12 +89,51 @@ export const addProduct = async (productData) => {
 };
 
 export const updateProduct = async (id, productData) => {
+  // Copiar los datos del producto sin modificar el original
+  const mappedProductData = { ...productData };
+
+  // Mapear campos del formulario a los campos correctos de la base de datos
+  if ('categoryId' in mappedProductData) {
+    mappedProductData.category_id = mappedProductData.categoryId;
+    delete mappedProductData.categoryId;
+  }
+  if ('subcategoryId' in mappedProductData) {
+    mappedProductData.subcategory_id = mappedProductData.subcategoryId;
+    delete mappedProductData.subcategoryId;
+  }
+  if ('unitOfMeasure' in mappedProductData) {
+    mappedProductData.unit = mappedProductData.unitOfMeasure;
+    delete mappedProductData.unitOfMeasure;
+  }
+  if ('image' in mappedProductData) {
+    mappedProductData.image_url = mappedProductData.image;
+    delete mappedProductData.image;
+  }
+  if ('expirationDate' in mappedProductData) {
+    delete mappedProductData.expirationDate; // Este campo no existe en la base de datos de productos
+  }
+  if ('createdAt' in mappedProductData) {
+    delete mappedProductData.createdAt; // No se actualiza en ediciones
+  }
+  if ('updatedAt' in mappedProductData) {
+    delete mappedProductData.updatedAt; // No se envía, se gestiona automáticamente
+  }
+  if ('created_at' in mappedProductData) {
+    delete mappedProductData.created_at; // No se actualiza en ediciones
+  }
+  if ('updated_at' in mappedProductData) {
+    delete mappedProductData.updated_at; // No se envía, se gestiona automáticamente
+  }
+  if ('wholesalePrice' in mappedProductData) {
+    delete mappedProductData.wholesalePrice; // Este campo no existe en la base de datos
+  }
+
+  // Actualizar el campo updated_at
+  mappedProductData.updated_at = new Date().toISOString();
+
   const { error } = await supabase
     .from('products')
-    .update({
-      ...productData,
-      updated_at: new Date().toISOString()
-    })
+    .update(mappedProductData)
     .eq('id', id);
 
   if (error) {

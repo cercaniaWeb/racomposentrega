@@ -71,29 +71,29 @@ const InventoryPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-6 bg-[#0f0f0f] h-full">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Inventario Detallado por Lote</h1>
+        <h1 className="text-2xl font-bold text-[#f5f5f5]">Inventario Detallado por Lote</h1>
         <div className="flex items-center space-x-4">
-          <Button onClick={() => handleOpenModal()} className="bg-indigo-600 text-white hover:bg-indigo-700">
+          <Button onClick={() => handleOpenModal()} variant="primary">
             Añadir/Editar Producto
           </Button>
           <div>
-            <label htmlFor="location-filter" className="mr-2 font-medium">Filtrar por Ubicación:</label>
+            <label htmlFor="location-filter" className="mr-2 font-medium text-[#c0c0c0]">Filtrar por Ubicación:</label>
             <select 
               id="location-filter"
               value={locationFilter}
               onChange={(e) => setLocationFilter(e.target.value)}
-              className="border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              className="border border-[#404040] bg-[#202020] text-[#f5f5f5] rounded-xl focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] px-3 py-2"
             >
-              <option value="all">Todas las Ubicaciones</option>
+              <option className="bg-[#202020] text-[#f5f5f5]" value="all">Todas las Ubicaciones</option>
               {stores.map(store => (
-                <option key={store.id} value={store.id}>{store.name}</option>
+                <option className="bg-[#202020] text-[#f5f5f5]" key={store.id} value={store.id}>{store.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label htmlFor="category-filter" className="mr-2 font-medium">Filtrar por Categoría:</label>
+            <label htmlFor="category-filter" className="mr-2 font-medium text-[#c0c0c0]">Filtrar por Categoría:</label>
             <select 
               id="category-filter"
               value={categoryFilter}
@@ -101,26 +101,26 @@ const InventoryPage = () => {
                 setCategoryFilter(e.target.value);
                 setSubcategoryFilter('all'); // Reset subcategory filter when category changes
               }}
-              className="border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              className="border border-[#404040] bg-[#202020] text-[#f5f5f5] rounded-xl focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] px-3 py-2"
             >
-              <option value="all">Todas las Categorías</option>
+              <option className="bg-[#202020] text-[#f5f5f5]" value="all">Todas las Categorías</option>
               {categories.filter(cat => !cat.parentId).map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option className="bg-[#202020] text-[#f5f5f5]" key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>
           {categoryFilter !== 'all' && categories.find(cat => cat.id === categoryFilter)?.subcategories.length > 0 && (
             <div>
-              <label htmlFor="subcategory-filter" className="mr-2 font-medium">Filtrar por Subcategoría:</label>
+              <label htmlFor="subcategory-filter" className="mr-2 font-medium text-[#c0c0c0]">Filtrar por Subcategoría:</label>
               <select 
                 id="subcategory-filter"
                 value={subcategoryFilter}
                 onChange={(e) => setSubcategoryFilter(e.target.value)}
-                className="border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                className="border border-[#404040] bg-[#202020] text-[#f5f5f5] rounded-xl focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] px-3 py-2"
               >
-                <option value="all">Todas las Subcategorías</option>
+                <option className="bg-[#202020] text-[#f5f5f5]" value="all">Todas las Subcategorías</option>
                 {categories.find(cat => cat.id === categoryFilter)?.subcategories.map(subCat => (
-                  <option key={subCat.id} value={subCat.id}>{subCat.name}</option>
+                  <option className="bg-[#202020] text-[#f5f5f5]" key={subCat.id} value={subCat.id}>{subCat.name}</option>
                 ))}
               </select>
             </div>
@@ -129,41 +129,41 @@ const InventoryPage = () => {
       </div>
 
       <Card className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">Lotes de Inventario</h2>
+        <h2 className="text-xl font-semibold text-[#f5f5f5] mb-4">Lotes de Inventario</h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-[#333333]">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subcategoría</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ubicación</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Unitario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha de Caducidad</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID de Lote</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Producto</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Categoría</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Subcategoría</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Ubicación</th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Cantidad</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Costo Unitario</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Fecha de Caducidad</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">ID de Lote</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-[#333333]">
               {filteredBatches.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No hay lotes de inventario que coincidan con el filtro.</td>
+                  <td colSpan="8" className="px-6 py-4 text-center text-[#a0a0a0]">No hay lotes de inventario que coincidan con el filtro.</td>
                 </tr>
               ) : (
                 filteredBatches.map((batch) => {
                   const product = products.find(p => p.id === batch.productId);
                   return (
-                    <tr key={batch.inventoryId} className={isDateNearby(batch.expirationDate) ? 'bg-yellow-100' : ''}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{getProductName(batch.productId)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getCategoryName(product?.categoryId)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getSubcategoryName(product?.subcategoryId)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getStoreName(batch.locationId)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800 font-semibold">{batch.quantity}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${batch.cost.toFixed(2)}</td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDateNearby(batch.expirationDate) ? 'text-yellow-800 font-bold' : 'text-gray-500'}`}>
+                    <tr key={batch.inventoryId} className={isDateNearby(batch.expirationDate) ? 'bg-[#ffab00]/20' : ''}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#f5f5f5]">{getProductName(batch.productId)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{getCategoryName(product?.categoryId)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{getSubcategoryName(product?.subcategoryId)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{getStoreName(batch.locationId)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-[#f5f5f5] font-semibold">{batch.quantity}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#c0c0c0]">${batch.cost.toFixed(2)}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDateNearby(batch.expirationDate) ? 'text-[#ffab00] font-bold' : 'text-[#a0a0a0]'}`}>
                         {batch.expirationDate ? new Date(batch.expirationDate).toLocaleDateString() : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{batch.inventoryId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#a0a0a0] font-mono">{batch.inventoryId}</td>
                     </tr>
                   );
                 })
@@ -174,36 +174,36 @@ const InventoryPage = () => {
       </Card>
 
       <Card>
-        <h2 className="text-xl font-semibold mb-4">Catálogo de Productos</h2>
+        <h2 className="text-xl font-semibold text-[#f5f5f5] mb-4">Catálogo de Productos</h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800">
+          <table className="min-w-full divide-y divide-[#333333]">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Categoría</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subcategoría</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Precio Unitario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Precio Mayoreo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Costo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Unidad</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Códigos de Barras</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Categoría</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Subcategoría</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Precio Unitario</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Precio Mayoreo</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Costo</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Unidad</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Códigos de Barras</th>
                 <th className="relative px-6 py-3"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[#333333]">
               {products.map((product, index) => (
-                <tr key={product.id} className={`${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-850'} hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{product.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{getCategoryName(product.categoryId)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{getSubcategoryName(product.subcategoryId)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${product.price.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${product.wholesalePrice ? product.wholesalePrice.toFixed(2) : 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${product.cost ? product.cost.toFixed(2) : 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{product.unitOfMeasure}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{product.barcodes ? product.barcodes.join(', ') : 'N/A'}</td>
+                <tr key={product.id} className={`${index % 2 === 0 ? 'bg-[#202020]' : 'bg-[#2c2c2c]'} hover:bg-[#404040] transition-colors`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#f5f5f5]">{product.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{getCategoryName(product.categoryId)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{getSubcategoryName(product.subcategoryId)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">${product.price.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">${product.wholesalePrice ? product.wholesalePrice.toFixed(2) : 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">${product.cost ? product.cost.toFixed(2) : 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{product.unitOfMeasure}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{product.barcodes ? product.barcodes.join(', ') : 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button onClick={() => handleOpenModal(product)} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-4">Editar</Button>
-                    <Button onClick={() => handleDeleteProduct(product.id)} className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">Eliminar</Button>
+                    <Button onClick={() => handleOpenModal(product)} variant="outline" className="mr-2">Editar</Button>
+                    <Button onClick={() => handleDeleteProduct(product.id)} variant="danger">Eliminar</Button>
                   </td>
                 </tr>
               ))}

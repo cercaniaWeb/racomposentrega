@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Moon, Sun } from 'lucide-react';
+import { User, Lock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
@@ -12,7 +12,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { handleLogin, darkMode, toggleDarkMode } = useAppStore();
+  const { handleLogin, darkMode } = useAppStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,9 +36,6 @@ const LoginPage = () => {
           <div className="text-center flex-grow">
             <img src={logo} alt="RACOM POS Logo" className="w-48 mx-auto" />
           </div>
-          <Button onClick={toggleDarkMode} variant="outline" className="p-2 ml-4">
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

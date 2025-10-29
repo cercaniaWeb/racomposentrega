@@ -14,6 +14,7 @@ import {
   updateUser,
   getStores,
   getInventoryBatches,
+  addInventoryBatch,
   getSales,
   addSale,
   getClients,
@@ -37,7 +38,7 @@ const useAppStore = create((set, get) => ({
   discount: { type: 'none', value: 0 }, // New discount state
   note: '', // New note state
   lastSale: null, // To store the last sale details for ticket printing
-  darkMode: false, // New state for dark mode
+  darkMode: true, // Fixed dark mode (disabled toggle functionality)
   isOnline: navigator.onLine, // Add online status
   offlineMode: false, // Add offline mode flag
   
@@ -66,10 +67,8 @@ const useAppStore = create((set, get) => ({
   addToShoppingList: (item) => set(state => ({ shoppingList: [...state.shoppingList, item] })), // New action to add to shopping list
   clearShoppingList: () => set({ shoppingList: [] }), // New action to clear shopping list
   toggleDarkMode: () => {
-    const newDarkMode = !get().darkMode;
-    set({ darkMode: newDarkMode });
-    // Save preference to localStorage
-    localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+    // Dark mode toggle is disabled - always stay in dark mode
+    console.log("Dark mode toggle is disabled");
   },
   
   // Network status management
@@ -899,7 +898,6 @@ const useAppStore = create((set, get) => ({
         locationId: storeId,
         quantity: 0, // Initial quantity is 0, it will be added later
         cost: rest.cost || 0,
-        expirationDate: rest.expirationDate || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -1157,18 +1155,13 @@ const useAppStore = create((set, get) => ({
   initialize: async () => {
     console.log("useAppStore initialize function called.");
     const storedTicketSettings = localStorage.getItem('ticketSettings');
-    const storedDarkMode = localStorage.getItem('darkMode');
     let initialTicketSettings = get().ticketSettings; // Get default settings
-    let darkModePreference = false; // Default to light mode
+    const darkModePreference = true; // Fixed dark mode (disabled toggle functionality)
 
     if (storedTicketSettings) {
       const parsedSettings = JSON.parse(storedTicketSettings);
       console.log("Loading ticketSettings from localStorage:", parsedSettings);
       initialTicketSettings = { ...initialTicketSettings, ...parsedSettings }; // Merge with stored
-    }
-
-    if (storedDarkMode) {
-      darkModePreference = JSON.parse(storedDarkMode);
     }
 
     // Initialize network listeners for offline support

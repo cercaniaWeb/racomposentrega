@@ -29,41 +29,41 @@ const UsersPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-6 bg-[#0f0f0f] h-full">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h1>
-        <Button onClick={() => handleOpenModal()} className="bg-indigo-600 text-white hover:bg-indigo-700">
+        <h1 className="text-2xl font-bold text-[#f5f5f5]">Gestión de Usuarios</h1>
+        <Button onClick={() => handleOpenModal()} variant="primary">
           Añadir Nuevo Usuario
         </Button>
       </div>
 
       <Card>
         {users.length === 0 ? (
-          <p className="text-gray-500">No hay usuarios registrados.</p>
+          <p className="text-[#a0a0a0]">No hay usuarios registrados.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[#333333]">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tienda</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Nombre</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Rol</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider">Tienda</th>
                   <th className="relative px-6 py-3"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
-                  <tr key={user.uid}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getStoreName(user.storeId)}</td>
+              <tbody className="divide-y divide-[#333333]">
+                {users.map((user, index) => (
+                  <tr key={user.uid} className={`${index % 2 === 0 ? 'bg-[#202020]' : 'bg-[#2c2c2c]'} hover:bg-[#404040] transition-colors`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#f5f5f5]">{user.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{user.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#c0c0c0]">{getStoreName(user.storeId)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button onClick={() => handleOpenModal(user)} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                      <Button onClick={() => handleOpenModal(user)} variant="outline" className="mr-2">
                         Editar
                       </Button>
-                      <Button onClick={() => handleDelete(user.uid)} className="text-red-600 hover:text-red-900">
+                      <Button onClick={() => handleDelete(user.uid)} variant="danger">
                         Eliminar
                       </Button>
                     </td>

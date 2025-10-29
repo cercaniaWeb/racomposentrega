@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Plus,
   Printer,
@@ -14,8 +14,6 @@ import {
   Scan,
   Calculator,
   Maximize,
-  Moon,
-  Sun,
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -61,7 +59,6 @@ export default function POSPage() {
     handleCheckout,
     lastSale,
     darkMode,
-    toggleDarkMode,
     isOnline,
     offlineMode,
   } = useAppStore();
@@ -171,28 +168,74 @@ export default function POSPage() {
     }
   };
 
+  // Estado para mostrar indicador de procesamiento
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Contador de intentos fallidos para evitar spam de errores
+  const failedAttempts = useRef(0);
+  const maxFailedAttempts = 5;
+
   const { ref } = useZxing({
     onResult(result) {
+      // Evitar procesamiento múltiple del mismo código
+      if (isProcessing) return;
+      
+      setIsProcessing(true);
       const scannedBarcode = result.getText();
-      const product = productsForSale.find(p => p.barcodes.includes(scannedBarcode));
+      
+      // Validar que el código no esté vacío
+      if (!scannedBarcode || scannedBarcode.trim() === '') {
+        setIsProcessing(false);
+        return;
+      }
+      
+      const product = productsForSale.find(p => 
+        p.barcodes && (
+          (Array.isArray(p.barcodes) && p.barcodes.includes(scannedBarcode)) ||
+          (typeof p.barcodes === 'string' && p.barcodes.split(',').map(b => b.trim()).includes(scannedBarcode))
+        )
+      );
+      
       if (product) {
         addToCart(product);
         setIsScanning(false);
+        failedAttempts.current = 0; // Resetear contador de fallos
+        // Mostrar feedback visual de éxito
+        console.log(`Producto agregado: ${product.name}`);
       } else {
         console.warn(`Product with barcode ${scannedBarcode} not found or out of stock in this location.`);
-        alert(`Producto con código ${scannedBarcode} no encontrado o sin existencias en esta tienda.`);
+        // Solo mostrar alerta si no hemos excedido el límite de intentos fallidos
+        if (failedAttempts.current < maxFailedAttempts) {
+          alert(`Producto con código ${scannedBarcode} no encontrado o sin existencias en esta tienda.`);
+        }
+        failedAttempts.current++;
       }
+      setIsProcessing(false);
     },
     onError(error) {
-      console.error('Error en escaneo de código de barras:', error);
-      // Don't show an alert on error as it can be spammy
+      // Solo registrar errores importantes, no los comunes de "no se detecta código"
+      if (!error.message.includes('No MultiFormat Readers were able to detect the code')) {
+        console.error('Error en escaneo de código de barras:', error);
+      }
+      
+      // Resetear estado de procesamiento si hay un error
+      if (isProcessing) {
+        setIsProcessing(false);
+      }
     },
     paused: !isScanning,
     video: {
       facingMode: 'environment', // Use back camera if available
-      width: { min: 640, ideal: 1280 },
-      height: { min: 480, ideal: 720 },
-    }
+      width: { min: 640, ideal: 1920, max: 1920 }, // Mayor resolución para mejor detección
+      height: { min: 480, ideal: 1080, max: 1080 },
+      frameRate: { ideal: 30, max: 60 }, // Más cuadros por segundo
+      aspectRatio: 16/9, // Relación de aspecto común
+      focusMode: 'continuous', // Enfoque automático continuo si está disponible
+    },
+    // Configurar formatos específicos para mejorar la detección
+    formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'data_matrix'],
+    // Reducir el retraso entre escaneos para mayor responsividad
+    delay: 100,
   });
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -222,34 +265,32 @@ export default function POSPage() {
   const canAccessEmployeeConsumption = currentUser && (currentUser.role === 'admin' || currentUser.role === 'gerente');
 
   return (
-      <main className="flex-1 flex flex-col md:flex-row gap-4 p-4 h-screen">
-        <div className="w-full md:w-2/3 flex flex-col gap-4">
-          <header className={`flex justify-between items-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+      <main className="flex-1 flex flex-col md:flex-row gap-6 p-6 h-screen bg-[#0f0f0f]">
+        <div className="w-full md:w-2/3 flex flex-col gap-6">
+          <header className="flex justify-between items-center text-[#f5f5f5]">
             <div>
-              <h1 className="text-2xl font-bold">Punto de Venta</h1>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tienda: {currentUser?.storeName || 'Principal'}</p>
+              <h1 className="text-2xl font-bold text-[#f5f5f5]">Punto de Venta</h1>
+              <p className="text-sm text-[#a0a0a0]">Tienda: {currentUser?.storeName || 'Principal'}</p>
               {offlineMode && (
                 <div className="flex items-center mt-1">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                  <span className="text-xs text-red-500 font-medium">Modo Sin Conexión</span>
+                  <div className="w-2 h-2 bg-[#ff5252] rounded-full mr-2"></div>
+                  <span className="text-xs text-[#ff5252] font-medium">Modo Sin Conexión</span>
                 </div>
               )}
             </div>
             <div className="flex items-center space-x-2">
               {!isOnline && (
-                <div className="flex items-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-md text-xs font-medium">
+                <div className="flex items-center bg-[#ffab00]/20 text-[#ffab00] px-2 py-1 rounded-md text-xs font-medium border border-[#ffab00]/30">
                   <Zap size={14} className="mr-1" />
                   <span>Sin conexión</span>
                 </div>
               )}
-              <Button onClick={toggleDarkMode} variant="outline" className="p-2">
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-              </Button>
+
               <Button onClick={toggleFullscreen} variant="outline" className="p-2">
                 <Maximize size={20} />
               </Button>
-              <UserCircle size={24} className={darkMode ? 'text-gray-300' : 'text-gray-400'} />
-              <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>{currentUser?.name}</span>
+              <UserCircle size={24} className="text-[#a0a0a0]" />
+              <span className="text-[#c0c0c0]">{currentUser?.name}</span>
             </div>
           </header>
 
@@ -257,27 +298,27 @@ export default function POSPage() {
             <div className="flex-1 overflow-auto">
               <table className="w-full">
                 <thead>
-                  <tr className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <th className="py-2 text-left">Cantidad</th>
-                    <th className="py-2 text-left">Producto</th>
-                    <th className="py-2 text-right">Precio</th>
-                    <th className="py-2 text-right">Acciones</th>
+                  <tr className="border-b border-[#333333]">
+                    <th className="py-2 text-left text-[#a0a0a0] text-sm font-semibold uppercase tracking-wider">Cantidad</th>
+                    <th className="py-2 text-left text-[#a0a0a0] text-sm font-semibold uppercase tracking-wider">Producto</th>
+                    <th className="py-2 text-right text-[#a0a0a0] text-sm font-semibold uppercase tracking-wider">Precio</th>
+                    <th className="py-2 text-right text-[#a0a0a0] text-sm font-semibold uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cart.map((item) => (
-                    <tr key={item.id} className={`${darkMode ? 'border-gray-700' : 'border-gray-200'} border-b last:border-none`}>
+                    <tr key={item.id} className="border-b border-[#333333] last:border-none">
                       <td className="py-3">
                         <input
                           type="number"
                           value={item.quantity}
                           onChange={(e) => handleQuantityChange(item.id, e)}
                           min="1"
-                          className={`w-16 border rounded-lg text-center ${darkMode ? 'bg-gray-700/70 text-white border-gray-600' : 'bg-white/80 border-gray-300'}`}
+                          className="w-16 border rounded-lg text-center bg-[#202020] text-[#f5f5f5] border-[#404040] focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff]"
                         />
                       </td>
-                      <td className={`py-3 font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{item.name}</td>
-                      <td className={`py-3 text-right font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                      <td className="py-3 font-medium text-[#f5f5f5]">{item.name}</td>
+                      <td className="py-3 text-right font-semibold text-[#f5f5f5]">
                         ${(item.price * item.quantity).toLocaleString()}
                       </td>
                       <td className="py-3 text-right">
@@ -285,7 +326,7 @@ export default function POSPage() {
                           onClick={() => removeFromCart(item.id)} 
                           variant="ghost"
                           size="sm"
-                          className={darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-500'}
+                          className="text-[#a0a0a0] hover:text-[#ff5252]"
                         >
                           <X size={18} />
                         </Button>
@@ -296,7 +337,7 @@ export default function POSPage() {
               </table>
             </div>
             
-            <div className="mt-4 flex flex-col xs:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-4 flex flex-col xs:flex-row justify-between items-center gap-4 pt-4 border-t border-[#333333]">
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => setIsScheduleVisitModalOpen(true)} variant="outline" className="font-medium flex items-center space-x-2"><Calendar size={16}/><span>Agendar</span></Button>
                 <Button onClick={() => setIsDiscountModalOpen(true)} variant="outline" className="font-medium flex items-center space-x-2"><Percent size={16}/><span>Descuento</span></Button>
@@ -307,9 +348,9 @@ export default function POSPage() {
                   </Button>
                 )}
               </div>
-              <div className={`text-right ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Subtotal: ${subtotal.toLocaleString()}</p>
-                <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total: ${subtotal.toLocaleString()}</p>
+              <div className="text-right text-[#c0c0c0]">
+                <p className="text-[#a0a0a0] text-sm">Subtotal: ${subtotal.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#f5f5f5]">Total: ${subtotal.toLocaleString()}</p>
               </div>
             </div>
             
@@ -354,8 +395,8 @@ export default function POSPage() {
 
           {isScanning && (
             <div className="mb-4">
-              <video ref={ref} className="w-full max-w-md h-auto aspect-video bg-gray-200 rounded-xl mx-auto"></video>
-              <p className="text-center text-sm text-gray-500 mt-2">Escaneando código de barras...</p>
+              <video ref={ref} className="w-full max-w-md h-auto aspect-video bg-[#2c2c2c] rounded-xl mx-auto"></video>
+              <p className="text-center text-sm text-[#a0a0a0] mt-2">Escaneando código de barras...</p>
             </div>
           )}
 
@@ -369,25 +410,25 @@ export default function POSPage() {
           </div>
           
           <div className="flex-1 overflow-auto" style={{maxHeight: 'calc(100vh - 220px)'}}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {productsForSale.map(p => (
-                <div key={p.id} className={`relative rounded-xl p-3 text-center cursor-pointer transition-all duration-200 hover:scale-[1.02] ${darkMode ? 'bg-gray-700/80 hover:bg-gray-600/80' : 'bg-gray-100 hover:bg-gray-200'}`} onClick={() => addToCart(p)}>
+                <div key={p.id} className="relative rounded-xl p-4 text-center cursor-pointer transition-all duration-200 hover:scale-[1.02] bg-[#2c2c2c] hover:bg-[#404040]" onClick={() => addToCart(p)}>
                    <div className={`absolute top-1 right-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-                     p.stockInLocation < 10 ? 'bg-red-500 text-white' : 
-                     p.stockInLocation < 20 ? 'bg-yellow-500 text-gray-800' : 
-                     'bg-green-500 text-white'
+                     p.stockInLocation < 10 ? 'bg-[#ff5252] text-white' : 
+                     p.stockInLocation < 20 ? 'bg-[#ffab00] text-[#1f1f1f]' : 
+                     'bg-[#00c853] text-white'
                    }`}>
                     {p.stockInLocation}
                   </div>
-                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                  <div className="bg-[#404040] border-2 border-dashed rounded-xl w-16 h-16 mx-auto mb-2 flex items-center justify-center">
                     {p.image ? (
                       <img src={p.image} alt={p.name} className="w-full h-full object-contain" />
                     ) : (
-                      <span className="text-gray-500 text-xs">No imagen</span>
+                      <span className="text-[#a0a0a0] text-xs">No imagen</span>
                     )}
                   </div>
-                  <p className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{p.name}</p>
-                  <p className={`text-sm font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>${p.price}</p>
+                  <p className="text-xs font-semibold text-[#f5f5f5]">{p.name}</p>
+                  <p className="text-sm font-bold text-[#7c4dff]">${p.price}</p>
                 </div>
               ))}
             </div>

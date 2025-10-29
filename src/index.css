@@ -2,31 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos globales para mejorar la apariencia */
+/* Estilos globales para mejorar la apariencia según la guía de estilos actualizada */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #f0f9ff 0%, #f9fafb 100%); /* Gradiente suave en modo claro */
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%); /* Fondo oscuro predeterminado según guía */
   background-attachment: fixed;
   line-height: 1.5;
 }
 
-/* Jerarquía tipográfica mejorada */
+/* Jerarquía tipográfica mejorada según guía de estilos */
 h1, .text-h1 {
-  @apply text-3xl md:text-4xl font-bold tracking-tight;
+  @apply text-[2.5rem] md:text-[3rem] font-bold tracking-[0.01em] leading-[1.25];
 }
 
 h2, .text-h2 {
-  @apply text-2xl md:text-3xl font-bold tracking-tight;
+  @apply text-2xl md:text-[2rem] font-bold tracking-[0.01em] leading-[1.25];
 }
 
 h3, .text-h3 {
-  @apply text-xl md:text-2xl font-semibold tracking-tight;
+  @apply text-xl md:text-[1.5rem] font-semibold tracking-[0.01em] leading-[1.25];
 }
 
 h4, .text-h4 {
-  @apply text-lg md:text-xl font-semibold;
+  @apply text-lg md:text-xl font-semibold leading-[1.25];
 }
 
 /* Estilos para texto de cuerpo */
@@ -40,12 +40,12 @@ h4, .text-h4 {
 
 /* Estilos para texto de subtítulo */
 .text-subtitle {
-  @apply text-base font-medium text-gray-500 dark:text-gray-400;
+  @apply text-base font-medium text-[#a0a0a0] dark:text-[#a0a0a0];
 }
 
 /* Estilos para texto de encabezado de tabla */
 .text-table-header {
-  @apply text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider;
+  @apply text-sm font-semibold text-[#a0a0a0] dark:text-[#a0a0a0] uppercase tracking-wider;
 }
 
 /* Estilos para texto de botón */
@@ -55,17 +55,17 @@ h4, .text-h4 {
 
 /* Estilos para texto de enlace */
 .text-link {
-  @apply font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline-offset-4 hover:underline;
+  @apply font-medium text-[#7c4dff] hover:text-[#5b2ecb] dark:text-[#7c4dff] dark:hover:text-[#5b2ecb] underline-offset-4 hover:underline;
 }
 
 /* Estilos para texto descriptivo */
 .text-description {
-  @apply text-gray-600 dark:text-gray-300;
+  @apply text-[#c0c0c0] dark:text-[#c0c0c0];
 }
 
 /* Mejorar el estilo de los selectores y inputs en general */
 select {
-  @apply rounded-xl border border-gray-300 bg-white/80 backdrop-blur-sm px-3 py-2 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 transition duration-200 shadow-sm;
+  @apply rounded-xl border border-[#404040] bg-[#202020] px-3 py-2 text-base focus:border-[#7c4dff] focus:ring-2 focus:ring-[#7c4dff]/50 transition duration-200 shadow-sm text-[#f5f5f5] dark:text-[#f5f5f5];
 }
 
 /* Estilo para scrollbars */
@@ -75,25 +75,25 @@ select {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100 rounded-full;
+  @apply bg-[#2c2c2c] rounded-full;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gradient-to-b from-gray-300 to-gray-400 rounded-full hover:from-gray-400 hover:to-gray-500;
+  @apply bg-[#404040] rounded-full hover:bg-[#505050];
 }
 
 .dark ::-webkit-scrollbar-track {
-  @apply bg-gray-800;
+  @apply bg-[#2c2c2c];
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  @apply bg-gradient-to-b from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800;
+  @apply bg-[#404040] hover:bg-[#505050];
 }
 
 /* Transiciones suaves para la mayoría de los elementos */
 * {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
   transition-duration: 200ms;
 }
 
@@ -105,35 +105,75 @@ input[type="reset"]:active {
   transform: scale(0.98);
 }
 
-/* Mejor contraste para textos */
-.text-gray-900 {
-  color: #111827 !important;
+/* Colores de texto según guía de estilos */
+.text-primary {
+  color: #ffffff !important; /* Blanco puro para alta legibilidad */
 }
 
-.text-gray-800 {
-  color: #1f2937 !important;
+.text-secondary {
+  color: #c0c0c0 !important; /* Gris claro */
 }
 
-.text-gray-700 {
-  color: #374151 !important;
+.text-tertiary {
+  color: #808080 !important; /* Gris medio */
 }
 
-/* Mejor contraste en modo oscuro */
-.dark .text-gray-100 {
-  color: #f9fafb !important;
+.text-accent {
+  color: #7c4dff !important; /* Púrpura accesible */
 }
 
-.dark .text-gray-200 {
-  color: #e5e7eb !important;
+.text-success {
+  color: #00c853 !important; /* Verde accesible */
 }
 
-.dark .text-gray-300 {
-  color: #d1d5db !important;
+.text-warning {
+  color: #ffab00 !important; /* Naranja/Ámbar accesible */
+}
+
+.text-error {
+  color: #ff5252 !important; /* Rojo accesible */
+}
+
+.text-info {
+  color: #2979ff !important; /* Azul accesible */
+}
+
+/* Colores de fondo */
+.bg-primary {
+  background-color: #0f0f0f !important; /* Fondo principal */
+}
+
+.bg-secondary {
+  background-color: #202020 !important; /* Superficies y paneles */
+}
+
+.bg-tertiary {
+  background-color: #2c2c2c !important; /* Superficies alternas */
+}
+
+.bg-accent {
+  background-color: #7c4dff !important; /* Acento */
+}
+
+.bg-success {
+  background-color: #00c853 !important; /* Éxito */
+}
+
+.bg-warning {
+  background-color: #ffab00 !important; /* Advertencia */
+}
+
+.bg-error {
+  background-color: #ff5252 !important; /* Error */
+}
+
+.bg-info {
+  background-color: #2979ff !important; /* Información */
 }
 
 /* Ajustes para modo oscuro */
 .dark body {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); /* Gradiente oscuro */
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
   background-attachment: fixed;
 }
 
@@ -146,38 +186,41 @@ input[type="reset"]:active {
   transform: translateY(-0.25rem);
 }
 
-/* Efectos de sombra mejorados */
+/* Efectos de sombra mejorados para tarjetas */
 .shadow-card {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .dark .shadow-card {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 /* Transiciones mejoradas */
 .transition-custom {
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
-/* Efecto de brillo en botones */
-.btn-glow {
-  position: relative;
-  overflow: hidden;
+/* Espaciado basado en sistema de 4px */
+.space-1 { margin: 4px; padding: 4px; }
+.space-2 { margin: 8px; padding: 8px; }
+.space-3 { margin: 12px; padding: 12px; }
+.space-4 { margin: 16px; padding: 16px; }
+.space-6 { margin: 24px; padding: 24px; }
+.space-8 { margin: 32px; padding: 32px; }
+.space-12 { margin: 48px; padding: 48px; }
+.space-16 { margin: 64px; padding: 64px; }
+
+/* Ajustes de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.btn-glow::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: rgba(255, 255, 255, 0.1);
-  transform: rotate(30deg);
-  transition: all 0.6s ease;
-}
-
-.btn-glow:hover::after {
-  transform: rotate(30deg) translate(20%, 20%);
+/* Estilo para elementos de enfoque */
+*:focus-visible {
+  outline: 2px solid #7c4dff;
+  outline-offset: 2px;
 }
