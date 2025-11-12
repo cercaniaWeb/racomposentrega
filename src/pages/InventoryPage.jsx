@@ -268,6 +268,9 @@ const InventoryPage = () => {
           <span>Agregar Producto al Catálogo</span>
         </button>
         <p className="text-[#a0a0b0] text-sm mt-2">
+          <strong>¿No ves tus productos en inventario?</strong> Los productos deben estar en el catálogo primero.
+          Si ya tienes productos en el catálogo pero no aparecen aquí, asegúrate de que tengan lotes de inventario asociados.
+          <br /><br />
           Para gestionar el catálogo de productos (qué vendes), use el módulo de Productos.
         </p>
       </div>

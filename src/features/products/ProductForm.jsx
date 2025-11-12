@@ -608,6 +608,20 @@ const ProductForm = ({ product, onClose, onSuccess, mode = 'modal', onSave }) =>
             <Package className="w-5 h-5 mr-2" />
             Inventario por Almacén
           </h4>
+          <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+            <div className="flex items-start">
+              <AlertCircle className="w-5 h-5 text-orange-500 mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-orange-300 text-sm">
+                  <strong>Importante:</strong> Los cambios en este formulario afectan únicamente el catálogo de productos (nombre, precio, costos, etc.).
+                  Para gestionar cantidades de inventario en cada ubicación, use el módulo de Inventario.
+                </p>
+                <p className="text-orange-300/80 text-sm mt-1">
+                  El inventario se gestiona por lotes, lo que permite un seguimiento más preciso con fechas de vencimiento y costos específicos.
+                </p>
+              </div>
+            </div>
+          </div>
           
           <div className="space-y-4">
             {inventoryData.map((item, index) => {
