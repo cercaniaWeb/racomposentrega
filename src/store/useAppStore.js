@@ -1142,68 +1142,44 @@ const useAppStore = create((set, get) => ({
     // Carrito
     addToCart: (product) => {
       const { currentUser, inventoryBatches, cart } = get();
-      
+
       // Si no hay currentUser, usar un storeId por defecto para fines de prueba
       const storeId = currentUser?.storeId || '1';
-  
+
       if (!storeId) {
         console.error("No store ID found for current user. Cannot add to cart.");
         return;
       }
-  
-      // For offline mode, we'll use the last known inventory
+
+      // Get current stock for this product in the current store
       let stockInLocation = 0;
       if (inventoryBatches && inventoryBatches.length > 0) {
         stockInLocation = inventoryBatches
           .filter(batch => String(batch.productId) === String(product.id) && String(batch.locationId) === String(storeId))
           .reduce((sum, batch) => sum + batch.quantity, 0);
-      } else {
-        // If no inventory data is available (offline), allow adding to cart
-        stockInLocation = Infinity;
       }
-  
-      // En modo desarrollo, permitir agregar productos aunque no tengan stock
-      if (process.env.NODE_ENV === 'development' || stockInLocation === Infinity) {
-        set((state) => {
-          const existingItem = state.cart.find(item => item.id === product.id);
-          if (existingItem) {
-            return {
-              cart: state.cart.map(item =>
-                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-              ),
-            };
-          } else {
-            return {
-              cart: [...state.cart, { ...product, quantity: 1 }],
-            };
-          }
-        });
-      } else {
-        // En producción, verificar stock real
-        const itemInCart = cart.find(item => item.id === product.id);
-        const quantityInCart = itemInCart ? itemInCart.quantity : 0;
-  
-        if (quantityInCart >= stockInLocation) {
-          console.warn(`Cannot add more ${product.name} to cart. Stock limit reached.`);
-          return; 
+
+      // Always allow adding to cart regardless of stock (inventory validation happens at checkout)
+      set((state) => {
+        const existingItem = state.cart.find(item => item.id === product.id);
+        if (existingItem) {
+          return {
+            cart: state.cart.map(item =>
+              item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+            ),
+          };
+        } else {
+          // Add stock information to the cart item for reference
+          return {
+            cart: [...state.cart, {
+              ...product,
+              quantity: 1,
+              stockInLocation: stockInLocation // Include stock info for UI feedback
+            }],
+          };
         }
-  
-        set((state) => {
-          const existingItem = state.cart.find(item => item.id === product.id);
-          if (existingItem) {
-            return {
-              cart: state.cart.map(item =>
-                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-              ),
-            };
-          } else {
-            return {
-              cart: [...state.cart, { ...product, quantity: 1 }],
-            };
-          }
-        });
-      }
-      
+      });
+
       // Save cart to offline storage
       offlineStorage.saveCart(get().cart);
     },
@@ -1229,26 +1205,44 @@ const useAppStore = create((set, get) => ({
       const { cart, currentUser, inventoryBatches, discount, note, isOnline } = get();
       const { cash, card, cardCommission, commissionInCash } = payment;
       const storeId = currentUser?.storeId;
-  
+
       if (!storeId) {
         console.error("Checkout failed: No store ID for current user.");
         return;
       }
-  
+
+      // First, validate that we have sufficient inventory for all items in the cart
+      for (const item of cart) {
+        const totalAvailableStock = inventoryBatches
+          .filter(batch => String(batch.productId) === String(item.id) && String(batch.locationId) === String(storeId))
+          .reduce((sum, batch) => sum + batch.quantity, 0);
+
+        if (item.quantity > totalAvailableStock && totalAvailableStock !== Infinity) {
+          // In offline mode or if inventory is not tracked (Infinity), allow the sale
+          if (!isOnline || totalAvailableStock === Infinity) {
+            console.warn(`Insufficient stock for ${item.name} (${item.quantity} requested, ${totalAvailableStock} available), but proceeding in offline mode.`);
+          } else {
+            console.error(`Insufficient stock for ${item.name} (${item.quantity} requested, ${totalAvailableStock} available). Sale cannot proceed.`);
+            alert(`Stock insuficiente para ${item.name}. Solo hay ${totalAvailableStock} unidades disponibles.`);
+            return { success: false, error: `Stock insuficiente para ${item.name}` };
+          }
+        }
+      }
+
       // Create a copy of inventory batches to update
       let updatedBatches = JSON.parse(JSON.stringify(inventoryBatches)); // Deep copy to avoid mutation issues
-  
+
       // Deduct quantities from inventory batches
       for (const item of cart) {
         let quantityToDeduct = item.quantity;
-  
+
         const relevantBatches = updatedBatches
           .filter(b => b.productId === item.id && b.locationId === storeId)
-          .sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
-  
+          .sort((a, b) => new Date(a.expirationDate) || new Date(8640000000000000) - new Date(b.expirationDate) || new Date(8640000000000000)); // Sort by expiration date (null dates go last)
+
         for (const batch of relevantBatches) {
           if (quantityToDeduct <= 0) break;
-  
+
           const deductAmount = Math.min(quantityToDeduct, batch.quantity);
           batch.quantity -= deductAmount;
           quantityToDeduct -= deductAmount;

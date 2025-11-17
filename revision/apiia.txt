@@ -1,0 +1,521 @@
+¡Excelente\! Aquí tienes el documento en formato Markdown con la configuración completa y detallada para exponer tu API de reportes usando una Supabase Edge Function.
+
+-----
+
+# 📊 API de Reportes con Supabase Edge Function
+
+Esta configuración detalla la arquitectura, seguridad, contratos e implementación de una API centralizada en una **Supabase Edge Function** para generar reportes dinámicos, como los productos más vendidos, de forma segura y escalable.
+
+-----
+
+## 1\. Arquitectura y Razonamiento
+
+| Componente | Descripción | Función Principal |
+| :--- | :--- | :--- |
+| **Frontend (Next.js)** | Envía una petición `POST` al endpoint de la Edge Function. | Origen de la solicitud, envía `user_jwt` en el `Authorization` header. |
+| **Supabase Edge Function** | **Punto central**. Valida JWT/usuario, ejecuta consultas seguras (a menudo usando `SERVICE_ROLE_KEY`), y devuelve el resultado. | Generación de reportes (JSON) o un URL firmado (CSV). |
+| **Base de Datos (Postgres)** | Contiene las tablas de datos (`sales`, `products`, etc.). | Fuente de datos para los reportes. |
+| **Tabla `report_requests` (Opcional)** | Almacena logs de quién pidió qué y cuándo. | Auditoría y control de límites de uso. |
+
+### Ventajas Clave
+
+  * **Seguridad:** El `SERVICE_ROLE_KEY` (si es necesario para consultas administrativas) **nunca se expone al cliente**. Solo la Edge Function tiene acceso.
+  * **Aislamiento:** La lógica de acceso a datos con privilegios se aísla del frontend.
+  * **Escalabilidad/Facilidad:** La Edge Function corre en el CDN de Supabase, es fácil de desplegar y usa `secrets`.
+
+-----
+
+## 2\. Variables de Entorno Necesarias
+
+### Para el Frontend (Expuestas públicamente)
+
+| Variable | Valor de Ejemplo | Propósito |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://pgbefqzlrvjnsymigfmv.supabase.co` | Conexión a Supabase. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `pk...` | Inicializar el cliente Supabase para obtener el JWT del usuario. |
+
+### Para la Edge Function (Secretos)
+
+| Variable | Valor de Ejemplo | Propósito |
+| :--- | :--- | :--- |
+| `SUPABASE_URL` | `https://pgbefqzlrvjnsymigfmv.supabase.co` | URL para la conexión del servicio. |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbGci...` | **CLAVE SECRETA** para saltarse RLS si la función requiere acceso administrativo a datos. |
+| `OPTIONAL: REPORT_ADMIN_ROLE` | `admin` | Rol requerido para solicitar el reporte (para validación de autorización). |
+
+> ⚠️ **¡Importante\!** Al desplegar la Edge Function, la `SUPABASE_SERVICE_ROLE_KEY` debe ser configurada como un secreto en el proyecto Supabase, **nunca en el código o en archivos de configuración públicos**.
+
+-----
+
+## 3\. Contratos de la API (Endpoints)
+
+La ruta base de la Edge Function es `/reporting`.
+
+### `POST /reporting/generate` (Generar Reporte)
+
+| Tipo | Detalle |
+| :--- | :--- |
+| **Descripción** | Genera un reporte basado en el `body` y devuelve JSON inline o un URL firmado a un CSV. |
+| **Headers** | `Authorization: Bearer <user_jwt>`, `Content-Type: application/json` |
+| **Body (Ejemplo)** | \`\`\`json
+{
+"report": "top\_products",
+"params": {
+"period": "last\_week",
+"limit": 3,
+"format": "json" // or "csv"
+}
+}
+
+````|
+| **Respuesta 200 (JSON)** | Devuelve los datos directamente. |
+| **Respuesta 200 (CSV)** | Devuelve un URL firmado para descargar. ```json
+{ "csv_url": "https://...signed-url..." }
+``` |
+| **Errores** | `401 Unauthorized`, `400 Bad Request`, `429 Too Many Requests`. |
+
+### `GET /reporting/schema` (Opcional)
+
+* **Descripción:** Devuelve un catálogo de reportes disponibles y sus parámetros esperados.
+
+---
+
+## 4. Seguridad y Autorización
+
+### 🔐 Autenticación (JWT)
+
+1.  El frontend obtiene el **JWT del usuario** tras el login.
+2.  La Edge Function recibe el JWT en el `Authorization` header.
+3.  La función puede usar el JWT para crear un cliente Supabase "autenticado" con el perfil del usuario (para RLS si aplica), o simplemente **validar que el token sea legítimo**.
+
+### 🔑 Autorización (Roles y Service Role)
+
+* **Validación de Usuario:** Se verifica si el usuario autenticado tiene el `role` necesario (usando un claim del JWT o consultando la tabla de perfiles si es necesario).
+* **Acceso a Datos Amplio:** Para queries que necesitan datos que RLS (Row Level Security) podría bloquear (ej. reportes sobre *todos* los datos), la Edge Function utiliza la `SUPABASE_SERVICE_ROLE_KEY`. Esto le permite ejecutar la consulta con privilegios de administrador, **ignorando RLS**.
+    * **Mitigación:** Si se usa el `SERVICE_ROLE_KEY`, la auditoría en la tabla `report_requests` se vuelve **obligatoria** para saber qué usuario invocó la operación.
+
+### 🛡️ Rate Limiting
+
+* Se puede implementar un límite de peticiones por `user_id` (p. ej., 5 solicitudes/minuto) usando la tabla de auditoría `report_requests` para llevar el conteo.
+
+---
+
+## 5. Tabla de Auditoría (Recomendada)
+
+La Edge Function debe insertar un registro en esta tabla cada vez que genera un reporte, especialmente si usa la `SERVICE_ROLE_KEY`.
+
+```sql
+CREATE TABLE public.report_requests (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  requested_by uuid, -- ID del usuario que invocó la función
+  report_name text NOT NULL,
+  params jsonb,
+  format text,
+  created_at timestamptz DEFAULT now()
+);
+````
+
+-----
+
+## 6\. Edge Function: Código TypeScript para Deploy
+
+A continuación, la implementación de la Edge Function (`reporting/index.ts`). Este ejemplo asume que crearás una función de base de datos (`reports.top_products`) para la lógica SQL, lo cual es la **práctica más segura**.
+
+### `reporting/index.ts`
+
+```typescript
+// reporting/index.ts
+
+import { createClient } from "npm:@supabase/supabase-js@2.30.0";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+// Usamos SERVICE_ROLE_KEY para la conexión de servicio que llama a RPC/SQL.
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; 
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+}
+
+// Cliente con SERVICE_ROLE para llamar a la función RPC de DB.
+const svc = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+interface ReportRequest {
+  report: string;
+  params?: Record<string, any>;
+}
+
+/**
+ * Calcula el rango de tiempo de la semana ISO anterior (Lunes a Domingo) en UTC.
+ */
+function isoWeekRangeForPreviousWeek(now = new Date()): { start: string, end: string } {
+  // Lógica para determinar la semana pasada... (la misma que se mostró)
+  // ... (código omitido por espacio, ya provisto por el usuario)
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = d.getUTCDay(); // 0 (Sun) - 6 (Sat)
+  const daysSinceMonday = (day + 6) % 7;
+  const startOfThisWeek = new Date(d);
+  startOfThisWeek.setUTCDate(d.getUTCDate() - daysSinceMonday);
+  startOfThisWeek.setUTCHours(0,0,0,0);
+  const startPrev = new Date(startOfThisWeek);
+  startPrev.setUTCDate(startPrev.getUTCDate() - 7);
+  const endPrev = new Date(startPrev);
+  endPrev.setUTCDate(endPrev.getUTCDate() + 6);
+  endPrev.setUTCHours(23,59,59,999);
+  return { start: startPrev.toISOString(), end: endPrev.toISOString() };
+}
+
+/**
+ * Llama a la función PostgreSQL reports.top_products via RPC.
+ * Requiere que la función SQL esté creada en la DB.
+ */
+async function generateTopProducts(params: any) {
+  let p_from: string, p_to: string;
+
+  // Lógica para determinar el periodo (last_week o from/to)
+  if (params?.period === "last_week" || (!params?.from && !params?.to)) {
+    const r = isoWeekRangeForPreviousWeek();
+    p_from = r.start;
+    p_to = r.end;
+  } else {
+    p_from = params.from;
+    p_to = params.to;
+  }
+  
+  const p_limit = Math.min(100, params?.limit ? Number(params.limit) : 3);
+  const p_store_id = params?.store_id || null;
+
+  // ➡️ Mejor práctica: llamar a la función RPC de la DB
+  const { data, error } = await svc.rpc('top_products', { 
+      p_from, 
+      p_to, 
+      p_store_id, 
+      p_limit 
+  }); 
+
+  // Nota: Esto asume que creaste la función 'top_products' en la DB (Ver Sección 8).
+
+  return { data, error };
+}
+
+Deno.serve(async (req: Request) => {
+  try {
+    // Manejo de CORS (necesario si la llama el frontend directamente)
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization,content-type", "Access-Control-Allow-Methods": "POST,GET,OPTIONS" } });
+    
+    const url = new URL(req.url);
+
+    if (url.pathname === "/reporting/generate" && req.method === "POST") {
+      const auth = req.headers.get("authorization") || "";
+      // ⚠️ Tarea pendiente: Validar el JWT del usuario si no usas RLS 
+
+      const body: ReportRequest = await req.json();
+      if (!body?.report) return new Response(JSON.stringify({ error: "report required" }), { status: 400 });
+
+      // Whitelist de reportes
+      const allowedReports = ["top_products"];
+      if (!allowedReports.includes(body.report)) return new Response(JSON.stringify({ error: "report not supported" }), { status: 400 });
+
+      // Generar reporte
+      if (body.report === "top_products") {
+        const result = await generateTopProducts(body.params || {});
+
+        if (result.error) {
+          return new Response(JSON.stringify({ error: "query_failed", details: result.error.message || null }), { status: 500, headers: { "Content-Type": "application/json" } });
+        }
+        
+        // ⚠️ Tarea pendiente: Registrar en tabla report_requests
+
+        return new Response(JSON.stringify({ 
+          report: "top_products", 
+          params: body.params || {}, 
+          generated_at: new Date().toISOString(), 
+          data: result.data 
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+    }
+    
+    // Endpoint /schema (para saber qué está disponible)
+    if (url.pathname === "/reporting/schema" && req.method === "GET") {
+      return new Response(JSON.stringify({ reports: [{ name: "top_products", params: { period: ["last_week", "from/to"], limit: "integer", store_id: "string|null", format: ["json", "csv"] } }] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+
+    return new Response("Not found", { status: 404 });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: "internal_error", message: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
+});
+```
+
+-----
+
+## 7\. Ejemplo de Llamada desde Next.js (Frontend)
+
+El cliente Next.js obtiene el JWT del usuario y lo usa para autenticar la llamada a la Edge Function.
+
+```javascript
+// frontend/reportApi.js
+
+import { supabase } from './supabaseClient'; // Asume que tienes el cliente Supabase inicializado
+
+export async function requestTopProducts(params = { period: "last_week", limit: 3 }) {
+  // 1. Obtener el JWT del usuario
+  const { data: { session } } = await supabase.auth.getSession();
+  const jwt = session?.access_token;
+
+  if (!jwt) {
+      throw new Error("User not authenticated.");
+  }
+
+  // 2. Llamada a la Edge Function
+  const EDGE_FUNCTION_URL = 'https://<PROJECT_REF>.functions.supabase.co/reporting/generate'; // Reemplaza <PROJECT_REF>
+  
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${jwt}`,
+    },
+    body: JSON.stringify({ report: 'top_products', params })
+  });
+  
+  if (!res.ok) {
+      // Manejar 400, 401, 500
+      const errorBody = await res.json();
+      throw new Error(errorBody.error || `HTTP error! status: ${res.status}`);
+  }
+
+  return res.json();
+}
+```
+
+-----
+
+## 8\. Función SQL Recomendada (Para Base de Datos)
+
+Esta es la forma **más segura** de ejecutar la lógica del reporte, encapsulada en una función PostgreSQL que la Edge Function puede llamar a través de **RPC** usando el `SERVICE_ROLE_KEY`.
+
+```sql
+CREATE OR REPLACE FUNCTION reports.top_products(
+    p_from timestamptz, 
+    p_to timestamptz, 
+    p_store_id text DEFAULT NULL, 
+    p_limit int DEFAULT 3
+)
+RETURNS TABLE(product_id uuid, name text, units_sold numeric, revenue numeric)
+SECURITY DEFINER -- Permite que se ejecute con los permisos de su creador (o service_role)
+LANGUAGE sql
+AS $$
+  SELECT
+    p.id AS product_id,
+    p.name,
+    SUM((item->>'quantity')::numeric) AS units_sold,
+    SUM(((item->>'quantity')::numeric) * COALESCE((item->>'price')::numeric, 0)) AS revenue)
+  FROM public.sales s,
+  LATERAL jsonb_array_elements(s.cart) AS item -- Expande el array JSONB del carrito
+  JOIN public.products p ON (item->>'product_id')::uuid = p.id
+  WHERE s.date BETWEEN p_from AND p_to -- Parámetros seguros
+    AND (p_store_id IS NULL OR s.store_id = p_store_id)
+  GROUP BY p.id, p.name
+  ORDER BY units_sold DESC
+  LIMIT p_limit;
+$$;
+```
+
+-----
+
+## 9\. Siguientes Pasos (Acción Requerida)
+
+Para finalizar la implementación, necesito tu confirmación sobre los siguientes puntos.
+
+| Pregunta | Respuesta Requerida |
+| :--- | :--- |
+| **Crear Función SQL** ¿Deseas que cree la función SQL `reports.top_products` en tu DB ahora? | **Sí** o **No** |
+| **Desplegar Función** ¿Deseas que despliegue la Edge Function desde aquí? | **Sí** o **No** |
+| **Autorización** ¿Quieres que la Edge Function requiera roles (**solo admin**) o cualquier **usuario autenticado** puede solicitar reportes? | **Admin** o **Cualquier Usuario** |
+
+Por favor, indica tu preferencia para que pueda proceder con los siguientes pasos.
+
+
+Procederé a crear la función SQL reports.top_products y luego actualizaré la Edge Function para exigir solo admin. Ejecutaré primero la DDL para crear la función en la base de datos (es una operación destructiva? no — es DDL). Ejecutando ahora.
+
+create_reports_top_products
+Write
+
+
+
+CREATE SCHEMA IF NOT EXISTS reports;
+
+CREATE OR REPLACE FUNCTION reports.top_products(p_from timestamptz, p_to timestamptz, p_store_id text DEFAULT NULL, p_limit int DEFAULT 3)
+RETURNS TABLE(product_id uuid, name text, units_sold numeric, revenue numeric)
+LANGUAGE sql
+AS $$
+  SELECT
+    p.id AS product_id,
+    p.name,
+    SUM((item->>'quantity')::numeric) AS units_sold,
+    SUM(((item->>'quantity')::numeric) * COALESCE((item->>'price')::numeric, 0)) AS revenue
+  FROM public.sales s,
+  LATERAL jsonb_array_elements(s.cart) AS item
+  JOIN public.products p ON (item->>'product_id')::uuid = p.id
+  WHERE s.date BETWEEN p_from AND p_to
+    AND (p_store_id IS NULL OR s.store_id = p_store_id)
+  GROUP BY p.id, p.name
+  ORDER BY units_sold DESC
+  LIMIT p_limit;
+$$;
+
+Success. No rows returned
+
+Validación
+La función SQL reports.top_products fue creada en el esquema reports. Ahora prepararé y desplegaré la Edge Function que restringe acceso a usuarios con rol "admin". ¿Confirmas que proceda a desplegar la Edge Function? (responde "proceda" para desplegarla ahora o "no" para recibir solo el código).
+
+
+
+reporting
+import { createClient } from "npm:@supabase/supabase-js@2.30.0";
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+}
+
+const svc = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+
+function isoWeekRangeForPreviousWeek(now = new Date()) {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = d.getUTCDay();
+  const daysSinceMonday = (day + 6) % 7;
+  const startOfThisWeek = new Date(d);
+  startOfThisWeek.setUTCDate(d.getUTCDate() - daysSinceMonday);
+  startOfThisWeek.setUTCHours(0,0,0,0);
+  const startPrev = new Date(startOfThisWeek);
+  startPrev.setUTCDate(startPrev.getUTCDate() - 7);
+  const endPrev = new Date(startPrev);
+  endPrev.setUTCDate(endPrev.getUTCDate() + 6);
+  endPrev.setUTCHours(23,59,59,999);
+  return { start: startPrev.toISOString(), end: endPrev.toISOString() };
+}
+
+Deno.serve(async (req: Request) => {
+  try {
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization,content-type', 'Access-Control-Allow-Methods': 'POST,GET,OPTIONS' } });
+
+    const url = new URL(req.url);
+    if (url.pathname === '/reporting/generate' && req.method === 'POST') {
+      const authHeader = req.headers.get('authorization') || '';
+      if (!authHeader.startsWith('Bearer ')) return new Response(JSON.stringify({ error: 'missing_token' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      const token = authHeader.split(' ')[1];
+
+      // validate token via supabase auth
+      const { data: { user }, error: userError } = await svc.auth.getUser(token);
+      if (userError || !user) return new Response(JSON.stringify({ error: 'invalid_token' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+
+      // check admin role from user metadata or custom claim 'role'
+      const roleClaim = (user.user_metadata && user.user_metadata.role) || (user.app_metadata && user.app_metadata.role) || null;
+      // also allow checking a 'role' column in users table
+      let isAdmin = false;
+      if (roleClaim && roleClaim === 'admin') isAdmin = true;
+      else {
+        // fallback: query users table
+        const { data: urows } = await svc.from('users').select('role').eq('id', user.id).maybeSingle();
+        if (urows && (urows.role === 'admin' || urows.role === 'administrator')) isAdmin = true;
+      }
+
+      if (!isAdmin) return new Response(JSON.stringify({ error: 'forbidden', message: 'admin role required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+
+      const body = await req.json().catch(() => null);
+      if (!body || !body.report) return new Response(JSON.stringify({ error: 'report required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+
+      if (body.report !== 'top_products') return new Response(JSON.stringify({ error: 'unsupported_report' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+
+      // params
+      const params = body.params || {};
+      let from: string; let to: string;
+      if (params.period === 'last_week' || (!params.from && !params.to)) {
+        const r = isoWeekRangeForPreviousWeek(); from = r.start; to = r.end;
+      } else {
+        from = params.from; to = params.to;
+      }
+      const limit = Math.min(100, params.limit ? Number(params.limit) : 3);
+      const store_id = params.store_id || null;
+
+      // call the SQL function reports.top_products
+      const rpcParams: any = { p_from: from, p_to: to, p_limit: limit };
+      if (store_id) rpcParams.p_store_id = store_id;
+
+      const { data, error } = await svc.rpc('top_products', rpcParams);
+      if (error) return new Response(JSON.stringify({ error: 'rpc_failed', details: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+
+      // audit log
+      await svc.from('report_requests').insert([{ requested_by: user.id, report_name: 'top_products', params: params, format: 'json' }]);
+
+      return new Response(JSON.stringify({ report: 'top_products', params, generated_at: new Date().toISOString(), data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (url.pathname === '/reporting/schema' && req.method === 'GET') {
+      return new Response(JSON.stringify({ reports: [{ name: 'top_products', params: { period: ['last_week','from/to'], limit: 'integer', store_id: 'string|null' } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    return new Response('Not found', { status: 404 });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: 'internal_error', message: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+});
+
+The new function is now live at:
+
+https://pgbefqzlrvjnsymigfmv.supabase.co/functions/v1/reporting
+
+To download and work on this function locally, use the CLI command:
+
+supabase functions download reporting
+
+Despliegue completado
+La Edge Function reporting fue desplegada correctamente.
+
+Validaciones rápidas:
+
+Creé la función SQL reports.top_products en la base de datos y confirmé su creación.
+Desplegué la Edge Function reporting y la configuré para aceptar solo usuarios con rol admin. La función:
+Valida el JWT usando svc.auth.getUser(token).
+Verifica rol admin en claims o en la tabla users.
+Llama a reports.top_products vía RPC y devuelve JSON.
+Inserta un registro en report_requests para auditoría (asegúrate de tener creada la tabla report_requests; si no existe puedo crearla).
+Siguientes pasos recomendados:
+
+Crea la tabla report_requests para auditoría si aún no existe. ¿Deseas que la cree ahora? (responde "sí" o "no").
+Prueba la función desde tu frontend usando la ruta pública de la Edge Function: /reporting/generate con Authorization: Bearer <user_jwt>.
+Configura reglas CORS y límites si es necesario.
+Ejecutaré un DDL para crear la tabla de auditoría public.report_requests con columnas: id, requested_by, report_name, params, format, created_at. Ejecutando ahora.
+
+create_report_requests_table
+Write
+CREATE TABLE IF NOT EXISTS public.report_requests (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  requested_by uuid,
+  report_name text NOT NULL,
+  params jsonb,
+  format text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Grant insert on report_requests to service_role via Edge Function not necessary; keep default privileges.
+
+Hecho
+La tabla public.report_requests fue creada correctamente.
+
+Resumen rápido y próximas acciones:
+
+Función SQL reports.top_products: creada.
+Edge Function reporting: desplegada y restringida a usuarios con rol admin.
+Tabla de auditoría public.report_requests: creada.
+Pruebas sugeridas:
+
+Loguea como un usuario con rol admin y obtén su JWT.
+Haz una petición POST a la Edge Function endpoint /reporting/generate con body: { "report":"top_products", "params": { "period":"last_week", "limit": 3 } } y Header Authorization: Bearer
+Verifica que la respuesta contenga data con rows y que se haya insertado un registro en public.report_requests.

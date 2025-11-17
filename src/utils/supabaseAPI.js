@@ -263,6 +263,22 @@ export const getCategories = async () => {
 };
 
 
+// Obtener solo los nombres de categorías para el servicio de IA
+export const getCategoryNames = async () => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('name')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error obteniendo nombres de categorías:', error);
+    return [];
+  }
+
+  // Retorna un array con los nombres de las categorías
+  return data.map(cat => cat.name.toLowerCase());
+};
+
 export const addCategory = async (categoryData) => {
   // Convert camelCase to snake_case for database
   const dbData = { ...categoryData };

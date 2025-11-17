@@ -19,41 +19,27 @@ const CashClosingModal = ({ onClose }) => {
     content: () => ticketRef.current,
   });
 
-  const handleSaveTicket = async () => {
-    const element = ticketRef.current;
-    if (element) {
-      const canvas = await html2canvas(element);
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`cierre_caja_${new Date(cashClosingData.date).toISOString().slice(0, 10)}_${cashClosingData.cashier}.pdf`);
-    }
-  };
-
-  const salesToClose = salesHistory.filter(sale => 
-    (sale.userId === currentUser?.id || 
-    sale.userId === currentUser?.userId || 
-    sale.cashierId === currentUser?.id || 
-    sale.cashier === currentUser?.name || 
+  // Calculate cash closing data
+  const salesToClose = salesHistory.filter(sale =>
+    (sale.userId === currentUser?.id ||
+    sale.userId === currentUser?.userId ||
+    sale.cashierId === currentUser?.id ||
+    sale.cashier === currentUser?.name ||
     sale.cashier === currentUser?.displayName) &&
     (sale.status !== 'closed') // Only include non-closed sales
   ); // Changed to match possible store data field names
-  
+
   const totalSalesAmount = salesToClose.reduce((acc, sale) => acc + (sale.total || sale.subtotal || sale.amount || 0), 0);
-  const totalCashSales = salesToClose.filter(sale => 
-    (!sale.paymentMethod || 
-    sale.paymentMethod === 'cash' || 
-    sale.paymentMethod === 'efectivo' || 
+  const totalCashSales = salesToClose.filter(sale =>
+    (!sale.paymentMethod ||
+    sale.paymentMethod === 'cash' ||
+    sale.paymentMethod === 'efectivo' ||
     (sale.paymentMethod && sale.paymentMethod.toLowerCase().includes('cash')))
   ).reduce((acc, sale) => acc + (sale.total || sale.subtotal || sale.amount || 0), 0);
-  
-  const totalCardSales = salesToClose.filter(sale => 
-    (sale.paymentMethod === 'card' || 
-    sale.paymentMethod === 'tarjeta' || 
+
+  const totalCardSales = salesToClose.filter(sale =>
+    (sale.paymentMethod === 'card' ||
+    sale.paymentMethod === 'tarjeta' ||
     (sale.paymentMethod && sale.paymentMethod.toLowerCase().includes('card')))
   ).reduce((acc, sale) => acc + (sale.total || sale.subtotal || sale.amount || 0), 0);
 
@@ -74,6 +60,21 @@ const CashClosingModal = ({ onClose }) => {
     totalCardSales: totalCardSales,
     finalCash: finalCash,
     sales: salesWithIds,
+  };
+
+  const handleSaveTicket = async () => {
+    const element = ticketRef.current;
+    if (element) {
+      const canvas = await html2canvas(element);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`cierre_caja_${new Date(cashClosingData.date).toISOString().slice(0, 10)}_${cashClosingData.cashier}.pdf`);
+    }
   };
 
   const handleCloseCash = () => {

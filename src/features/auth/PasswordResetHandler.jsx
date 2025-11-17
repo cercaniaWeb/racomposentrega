@@ -1,0 +1,234 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '../../config/supabase';
+
+const PasswordResetHandler = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
+  const [isVerification, setIsVerification] = useState(false);
+
+  // Verificar si es un enlace de restablecimiento o verificación
+  useEffect(() => {
+    const type = searchParams.get('type');
+    const token = searchParams.get('token');
+    
+    if (type === 'recovery' && token) {
+      setIsRecovery(true);
+    } else if ((type === 'email' || type === 'signup') && token) {
+      setIsVerification(true);
+    }
+    // Si no hay tipo o token, o son inválidos, se mostrará el estado de acción no válida
+  }, [searchParams]);
+
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    if (newPassword !== confirmPassword) {
+      setMessage('Las contraseñas no coinciden');
+      setLoading(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setMessage('La contraseña debe tener al menos 6 caracteres');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setMessage('Contraseña actualizada con éxito. Redirigiendo...');
+      
+      // Esperar un momento y redirigir
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (error) {
+      console.error('Error al restablecer contraseña:', error);
+      setMessage(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    // Lógica para reenviar el correo de verificación
+    const email = searchParams.get('email');
+    if (email) {
+      try {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email,
+          options: {
+            emailRedirectTo: 'http://localhost:5173'
+          }
+        });
+
+        if (error) {
+          setMessage(`Error al reenviar verificación: ${error.message}`);
+        } else {
+          setMessage('Correo de verificación reenviado. Revisa tu bandeja de entrada.');
+        }
+      } catch (error) {
+        setMessage(`Error al reenviar verificación: ${error.message}`);
+      }
+    }
+  };
+
+  if (isRecovery) {
+    // Formulario para restablecer contraseña
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Restablecer Contraseña
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Ingresa tu nueva contraseña
+            </p>
+          </div>
+          
+          {message && (
+            <div className={`mb-6 p-4 rounded-md ${message.includes('éxito') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {message}
+            </div>
+          )}
+          
+          <form className="mt-8 space-y-6" onSubmit={handlePasswordReset}>
+            <div className="rounded-md shadow-sm -space-y-px">
+              <div>
+                <label htmlFor="newPassword" className="sr-only">
+                  Nueva contraseña
+                </label>
+                <input
+                  id="newPassword"
+                  name="newPassword"
+                  type="password"
+                  required
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Nueva contraseña"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="sr-only">
+                  Confirmar contraseña
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Confirmar contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
+              </button>
+            </div>
+            
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Volver al login
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (isVerification) {
+    // Mensaje para verificación de email
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Verificación de Email
+            </h2>
+          </div>
+          
+          <div className="mt-8 space-y-6">
+            <div className="bg-blue-50 p-4 rounded-md">
+              <p className="text-blue-800">
+                Tu email ha sido verificado exitosamente. Ahora puedes iniciar sesión.
+              </p>
+            </div>
+            
+            <div>
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Iniciar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no es un enlace de recuperación o verificación
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Acción no válida
+          </h2>
+        </div>
+        
+        <div className="mt-8 space-y-6">
+          <div className="bg-yellow-50 p-4 rounded-md">
+            <p className="text-yellow-800">
+              Este enlace no es válido o ya ha sido utilizado. Intenta iniciar sesión normalmente.
+            </p>
+          </div>
+          
+          <div>
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Ir al Login
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PasswordResetHandler;

@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import useAppStore from '../../store/useAppStore';
 
 const Card = ({ children, className = '', header, title, subtitle }) => {
@@ -18,6 +19,14 @@ const Card = ({ children, className = '', header, title, subtitle }) => {
       {children}
     </div>
   );
+};
+
+Card.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+  header: PropTypes.node, // This was in the original code but not used, so it's kept for compatibility
+  title: PropTypes.string,
+  subtitle: PropTypes.string
 };
 
 export default Card;

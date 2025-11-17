@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { X, Scale, Wifi, WifiOff, RotateCcw } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import scaleService from '../services/ScaleService';
@@ -315,4 +316,17 @@ const WeightModal = ({ isOpen, onClose, product, onAddToCart }) => {
 };
 
 // Export the main WeightModal component
+WeightModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  product: PropTypes.shape({
+    id: PropTypes.number,
+    name: PropTypes.string,
+    price: PropTypes.number,
+    unit: PropTypes.string,
+    image: PropTypes.string
+  }).isRequired,
+  onAddToCart: PropTypes.func.isRequired
+};
+
 export default WeightModal;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { AlertCircle, CheckCircle, X, Bell, Info } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -39,7 +40,7 @@ const NotificationItem = ({ id, type, message, title, duration, onClose }) => {
   if (!visible) return null;
 
   return (
-    <div 
+    <div
       className={`mb-2 transform transition-opacity duration-300 ease-in-out flex items-center p-4 rounded-lg shadow-lg ${
         config.color
       } text-white max-w-sm w-full`}
@@ -50,7 +51,7 @@ const NotificationItem = ({ id, type, message, title, duration, onClose }) => {
         {title && <div className="font-bold">{title}</div>}
         <div>{message}</div>
       </div>
-      <button 
+      <button
         onClick={startClose}
         className="ml-2 text-white hover:text-gray-200 focus:outline-none"
       >
@@ -58,6 +59,15 @@ const NotificationItem = ({ id, type, message, title, duration, onClose }) => {
       </button>
     </div>
   );
+};
+
+NotificationItem.propTypes = {
+  id: PropTypes.number.isRequired,
+  type: PropTypes.oneOf(['success', 'error', 'info', 'warning', 'pending']).isRequired,
+  message: PropTypes.string.isRequired,
+  title: PropTypes.string,
+  duration: PropTypes.number,
+  onClose: PropTypes.func.isRequired
 };
 
 // Provider de notificaciones global
@@ -97,5 +107,7 @@ const NotificationManager = () => {
     document.body
   );
 };
+
+NotificationManager.propTypes = {};
 
 export default NotificationManager;

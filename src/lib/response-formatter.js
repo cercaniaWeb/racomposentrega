@@ -31,7 +31,22 @@ function formatInventoryResponse(data, queryIntent) {
   const { inventoryList, category, location, totalProducts } = data;
   
   const categoryText = category ? `para la categoría ${category}` : 'general';
-  const locationText = location !== 'all' ? `en la ubicación ${location}` : 'en todas las ubicaciones';
+  
+  // Convertir ID de ubicación a nombre legible para el usuario
+  const getLocationName = (locationId) => {
+    switch(locationId) {
+      case 'tienda1':
+        return 'Tienda 1';
+      case 'tienda2':
+        return 'Tienda 2';
+      case 'bodega-central':
+        return 'Bodega Central';
+      default:
+        return locationId;
+    }
+  };
+  
+  const locationText = location !== 'all' ? `en ${getLocationName(location)}` : 'en todas las ubicaciones';
   
   if (inventoryList.length === 0) {
     return `No se encontró inventario ${categoryText} ${locationText}.`;

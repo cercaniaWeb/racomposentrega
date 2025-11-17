@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Lock, ShoppingCart } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
@@ -7,8 +7,27 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { handleLogin } = useAppStore();
+
+  // Verificar si hay un token en la URL (proceso de recuperación de contraseña o verificación de email)
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const type = searchParams.get('type');
+    
+    if (token && type === 'recovery') {
+      // Si hay un token de recuperación, redirigir al componente de restablecimiento
+      navigate('/auth/callback');
+      return;
+    }
+    
+    if (token && (type === 'email' || type === 'signup')) {
+      // Si es un token de verificación de email
+      navigate('/auth/callback');
+      return;
+    }
+  }, [searchParams, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +50,7 @@ const LoginPage = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
             <img 
-              src="/src/utils/logopos.png" 
+              src="/src/utils/logo.png"
               alt="Logo RACOM POS" 
               className="w-12 h-12 object-contain"
             />
@@ -92,6 +111,11 @@ const LoginPage = () => {
           <div className="mt-6 text-center">
             <p className="text-[#a0a0b0] text-sm">
               ¿No recuerdas tus credenciales? Contacta al administrador.
+            </p>
+            <p className="text-[#a0a0b0] text-sm mt-2">
+              <a href="/forgot-password" className="text-[#8A2BE2] hover:underline">
+                ¿Olvidaste tu contraseña?
+              </a>
             </p>
           </div>
         </div>

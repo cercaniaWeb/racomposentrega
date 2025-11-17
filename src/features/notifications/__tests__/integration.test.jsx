@@ -77,7 +77,7 @@ describe('Notification System Integration', () => {
     expect(screen.getByRole('alert')).toHaveClass('bg-red-500');
 
     act(() => {
-      fireEvent.click(screen.getByLabelText('Dismiss notification'));
+      fireEvent.click(screen.getByLabelText('Cerrar notificación'));
     });
 
     expect(screen.queryByText('Error message!')).not.toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('Notification System Integration', () => {
     expect(useNotificationStore.getState().notifications).toHaveLength(2);
 
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(8000); // Warning notifications have 8 second duration
     });
 
     expect(screen.queryByText('Info message!')).not.toBeInTheDocument();

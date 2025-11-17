@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { useZxing } from 'react-zxing';
 import { X } from 'lucide-react';
 import { DecodeHintType } from '@zxing/library';
@@ -37,6 +38,11 @@ const ScannerComponent = ({ onScan, onClose }) => {
       <p className="text-white mt-4">Apunte la cámara al código de barras</p>
     </div>
   );
+};
+
+ScannerComponent.propTypes = {
+  onScan: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired
 };
 
 export default ScannerComponent;

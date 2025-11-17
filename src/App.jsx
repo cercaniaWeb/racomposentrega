@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import Router from './Router';
+import StockChecker from './components/StockChecker';
 import useAppStore from './store/useAppStore';
 import { initializeSupabaseCollections } from './utils/supabaseAPI';
 import NotificationProvider from './features/notifications/NotificationProvider';
@@ -44,6 +45,7 @@ const App = () => {
       <div className="min-h-screen w-full bg-[#1D1D27]">
         <div className="flex flex-col h-screen">
           <Router />
+          <StockChecker />
         </div>
       </div>
     </NotificationProvider>

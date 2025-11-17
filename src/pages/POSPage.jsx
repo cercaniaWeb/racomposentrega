@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Plus,
   Printer,
@@ -17,6 +17,7 @@ import {
   Scale,
   Wifi,
   WifiOff,
+  BarChart2,
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -45,6 +46,11 @@ import ScannerComponent from '../components/qr/ScannerComponent';
 import WeightModal from '../components/WeightModal';
 import scaleService from '../services/ScaleService';
 import useNotification from '../features/notifications/hooks/useNotification';
+
+// Import the new styled components
+import ProductGrid from '../features/pos/components/ProductGrid';
+import CartPanel from '../features/pos/components/CartPanel';
+import Keypad from '../features/pos/components/Keypad';
 
 
 
@@ -89,7 +95,14 @@ export default function POSPage() {
   const [postPaymentModalOpen, setPostPaymentModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [isProductCollectionModalOpen, setIsProductCollectionModalOpen] = useState(false);
-  
+
+  // State for category filter
+  const [currentCategory, setCurrentCategory] = useState('Todo');
+
+  // State for the new keypad functionality
+  const [keypadInput, setKeypadInput] = useState('');
+  const [selectedCartItem, setSelectedCartItem] = useState(null);
+
   // Scale status state
   const [scaleStatus, setScaleStatus] = useState('disconnected');
   const [scaleStatusMessage, setScaleStatusMessage] = useState('Scale not connected');
@@ -158,7 +171,7 @@ export default function POSPage() {
         ...product,
         stockInLocation: process.env.NODE_ENV === 'development' ? 50 : 0, // Stock temporal en desarrollo
         name: product.name || product.nombre || product.productName || 'Producto sin nombre',
-        categoryName: categories.find(c => 
+        categoryName: categories.find(c =>
           c.id === (product.categoryId || product.category_id)
         )?.name || 'Sin categoría'
       }));
@@ -172,12 +185,12 @@ export default function POSPage() {
     const stockByProduct = inventoryBatches.reduce((acc, batch) => {
       // Manejar ambos formatos: locationId (camelCase) y location_id (snake_case)
       const batchLocationId = batch.locationId || batch.location_id;
-      
+
       // Asegurarse de que la comparación sea consistente con tipos de datos
       if (String(batchLocationId) === String(storeId)) {
         // Manejar ambos formatos: productId (camelCase) y product_id (snake_case)
         const productId = batch.productId || batch.product_id;
-        
+
         // Debug: mostrar detalles de cada batch
         console.log("Batch location match:", {
           batchLocationId,
@@ -185,7 +198,7 @@ export default function POSPage() {
           productId,
           quantity: batch.quantity
         });
-        
+
         // Asegurar tipo cadena para la clave del objeto
         acc[String(productId)] = (acc[String(productId)] || 0) + batch.quantity;
       }
@@ -196,6 +209,7 @@ export default function POSPage() {
     console.log("Products in catalog:", productCatalog.map(p => ({ id: p.id, name: p.name })));
 
     // Mapear productos del catálogo con información adicional
+    // Importante: Ahora mostramos productos del catálogo GENERAL, pero con stock real o desarrollo
     let allCatalogProducts = productCatalog
       .map(product => {
         const calculatedStock = stockByProduct[String(product.id)] || 0;
@@ -204,11 +218,12 @@ export default function POSPage() {
           // Mapear campos de categoría asegurando el nombre correcto
           categoryId: product.categoryId || product.category_id,
           // Calcular stock en la ubicación actual (asegurar string para comparación)
+          // Si no hay stock registrado, mostrar stock temporal para desarrollo
           stockInLocation: calculatedStock > 0 ? calculatedStock : (process.env.NODE_ENV === 'development' ? 50 : 0),
           // Asegurar que el nombre del producto existe
           name: product.name || product.nombre || product.productName || 'Producto sin nombre',
           // Añadir nombre de categoría si es necesario
-          categoryName: categories.find(c => 
+          categoryName: categories.find(c =>
             c.id === (product.categoryId || product.category_id)
           )?.name || 'Sin categoría'
         };
@@ -216,33 +231,26 @@ export default function POSPage() {
 
     console.log("allCatalogProducts count:", allCatalogProducts.length);
 
-    // Si no hay productos en el catálogo, mostrar todos los productos disponibles en el store
-    if (allCatalogProducts.length === 0) {
-      console.log("No products in catalog, showing all available products");
-      // En lugar de crear productos de ejemplo aquí, usar los productos del catálogo general
-      allCatalogProducts = productCatalog.map(product => ({
-        ...product,
-        stockInLocation: process.env.NODE_ENV === 'development' ? 50 : 0, // Stock temporal en desarrollo
-        name: product.name || product.nombre || product.productName || 'Producto sin nombre',
-        categoryName: categories.find(c => 
-          c.id === (product.categoryId || product.category_id)
-        )?.name || 'Sin categoría'
-      }));
-    }
-
-    // Filtrar productos según la búsqueda (asegurar strings para la comparación)
-    const productsToShow = allCatalogProducts.filter(product => 
-      // Manejar búsqueda con múltiples campos de nombre
-      (String(product.name).toLowerCase().includes(String(searchTerm).toLowerCase()) ||
-       String(product.nombre || '').toLowerCase().includes(String(searchTerm).toLowerCase()) ||
-       String(product.productName || '').toLowerCase().includes(String(searchTerm).toLowerCase()) ||
-       String(product.description || '').toLowerCase().includes(String(searchTerm).toLowerCase()))
+    // Filtrar productos por categoría y búsqueda (asegurar strings para la comparación)
+    let productsToShow = allCatalogProducts.filter(
+      (product) =>
+        String(product.name).toLowerCase().includes(String(searchTerm).toLowerCase()) ||
+        String(product.nombre || '').toLowerCase().includes(String(searchTerm).toLowerCase()) ||
+        String(product.productName || '').toLowerCase().includes(String(searchTerm).toLowerCase()) ||
+        String(product.description || '').toLowerCase().includes(String(searchTerm).toLowerCase())
     );
 
+    // Filtrar por categoría si no es 'Todo'
+    if (currentCategory !== 'Todo') {
+      productsToShow = productsToShow.filter(product =>
+        product.categoryName === currentCategory || product.category === currentCategory
+      );
+    }
+
     console.log("productsToShow count:", productsToShow.length);
-    
+
     return productsToShow;
-  }, [productCatalog, inventoryBatches, currentUser, searchTerm, categories]);
+  }, [productCatalog, inventoryBatches, currentUser, searchTerm, categories, currentCategory]);
 
   // Show notification when going offline
   React.useEffect(() => {
@@ -263,290 +271,250 @@ export default function POSPage() {
     };
   }, []);
 
-  const toggleScanning = () => setIsScanning(prev => !prev);
-
-  const handleScan = (scannedBarcode) => {
-    if (!scannedBarcode || scannedBarcode.trim() === '') return;
-    const product = productsForSale.find(p => p.barcode === scannedBarcode);
-    if (product) {
-      addToCart(product);
-      showSuccess(`${product.name} agregado al carrito.`);
-    } else {
-      showError(`Producto con código ${scannedBarcode} no encontrado.`);
+  const handleProductSelect = useCallback((product) => {
+    // Add product to cart using the existing store function
+    addToCart(product);
+    // Optionally select the item after adding to cart
+    const cartItem = cart.find(item => item.id === product.id);
+    if (cartItem) {
+      setSelectedCartItem(cartItem);
     }
-    setIsScanning(false);
-  };
+  }, [addToCart, cart]);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const handleQuantityChange = useCallback((productId, delta) => {
+    const item = cart.find(i => i.id === productId);
+    if (item) {
+      const newQty = Math.max(1, item.quantity + delta); // Ensure quantity doesn't go below 1
+      updateCartItemQuantity(productId, newQty);
+    }
+  }, [cart, updateCartItemQuantity]);
 
-  const handleQuantityChange = (productId, e) => {
-    const quantity = parseInt(e.target.value, 10);
-    updateCartItemQuantity(productId, quantity);
-  };
+  const handleRemoveItem = useCallback((productId) => {
+    removeFromCart(productId);
+    // Deselect if item being removed is selected
+    if (selectedCartItem && selectedCartItem.id === productId) {
+      setSelectedCartItem(null);
+    }
+  }, [removeFromCart, selectedCartItem]);
 
-  const handleCheckoutClick = () => {
+  const handleClearCart = useCallback(() => {
+    // Clear the cart using the existing store function
+    // Since we don't have a clearCart function in the store, we'll need to remove each item
+    cart.forEach(item => removeFromCart(item.id));
+    setSelectedCartItem(null);
+  }, [cart, removeFromCart]);
+
+  const handleCheckoutClick = useCallback((total) => {
+    // Open payment modal with the total
     setIsPaymentMethodModalOpen(true);
-  };
+  }, []);
 
   const handlePaymentSuccess = async (payment) => {
     const result = await handleCheckout(payment);
-    
-    // Handle offline mode result
-    if (result.offline) {
-      // Show a special message for offline transactions
-      alert('Venta procesada en modo sin conexión. Se sincronizará cuando haya conexión a Internet.');
+
+    // Only open the post-payment modal if the checkout was successful
+    if (result && result.success !== false) {
+      // Handle offline mode result
+      if (result.offline) {
+        // Show a special message for offline transactions
+        alert('Venta procesada en modo sin conexión. Se sincronizará cuando haya conexión a Internet.');
+      }
+
+      setIsPaymentMethodModalOpen(false);
+      setPostPaymentModalOpen(true); // Open post-payment options modal
+    } else {
+      // Show error message if checkout failed
+      alert('Error al procesar el pago. Por favor inténtelo de nuevo.');
+      setIsPaymentMethodModalOpen(false);
     }
-    
-    setIsPaymentMethodModalOpen(false);
-    setPostPaymentModalOpen(true); // Open post-payment options modal
   };
 
   const canAccessEmployeeConsumption = currentUser && (currentUser.role === 'admin' || currentUser.role === 'gerente');
 
+  // Keypad functionality
+  const handleNumberInput = useCallback((value) => {
+    // Evitar múltiples puntos decimales
+    if (value === '.' && keypadInput.includes('.')) return;
+
+    // Evitar que empiece con 0 si ya tiene un valor
+    if (keypadInput === '0' && value !== '.') {
+      setKeypadInput(value);
+      return;
+    }
+
+    // Límite de longitud (ej. 8 dígitos)
+    if (keypadInput.length >= 8 && value !== '.') return;
+
+    setKeypadInput(prev => prev + value);
+  }, [keypadInput]);
+
+  const handleKeypadFunction = useCallback((fnName) => {
+    if (fnName === 'clear') {
+      setKeypadInput('');
+      return;
+    }
+
+    if (fnName === 'backspace') {
+      setKeypadInput(prev => prev.slice(0, -1));
+      return;
+    }
+
+    // Las siguientes acciones requieren un ítem seleccionado y una entrada válida
+    if (!selectedCartItem) return;
+
+    const numericValue = parseFloat(keypadInput);
+    if (isNaN(numericValue) || numericValue <= 0) {
+      console.error("Valor de entrada inválido o no positivo.");
+      return;
+    }
+
+    // Update cart based on function type
+    if (fnName === 'set_qty') {
+      // Establecer Cantidad
+      const newQty = Math.floor(numericValue); // La cantidad debe ser entera
+      updateCartItemQuantity(selectedCartItem.id, newQty);
+    } else if (fnName === 'set_price') {
+      // Cambiar Precio - this would require a new function in the store
+      // For now, this functionality would need to be implemented differently
+      alert("Cambiar precio no está implementado en este ejemplo");
+    }
+
+    // Actualizar la selección y limpiar la entrada
+    setKeypadInput('');
+  }, [keypadInput, selectedCartItem, updateCartItemQuantity]);
+
+  // If no keypad input, show item quantity
+  const displayKeypadInput = useMemo(() => {
+    if (keypadInput) return keypadInput;
+    if (selectedCartItem) return selectedCartItem.quantity.toString();
+    return '';
+  }, [keypadInput, selectedCartItem]);
+
+  // Clear keypad input if no item selected
+  useEffect(() => {
+    if (!selectedCartItem) {
+      setKeypadInput('');
+    }
+  }, [selectedCartItem]);
+
+  // Handle item selection in cart
+  const handleItemClick = useCallback((item) => {
+    setSelectedCartItem(item);
+    setKeypadInput('');
+  }, []);
+
+  // Prepare categories for the ProductGrid
+  const categoryNames = useMemo(() => {
+    // Get unique category names from productsForSale
+    const uniqueCategories = [...new Set(productsForSale.map(p => p.categoryName || p.category))];
+    return ['Todo', ...uniqueCategories];
+  }, [productsForSale]);
+
+  // Calculate cart totals
+  const cartTotal = useMemo(() => {
+    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  }, [cart]);
+
   return (
-      <main className="flex-1 flex flex-col md:flex-row gap-4 p-4 bg-[#1D1D27] overflow-hidden h-full">
-        <div className="w-full md:w-2/3 flex flex-col gap-3 min-h-0 flex-1">
-          <header className="flex justify-between items-center text-[#f5f5f5] flex-shrink-0 pb-1">
-            <div>
-              <h1 className="text-lg font-bold text-[#F0F0F0]">Punto de Venta</h1>
-              <p className="text-xs text-[#a0a0b0]">Tienda: {currentUser?.storeName || 'Principal'}</p>
-              {offlineMode && (
-                <div className="flex items-center mt-0.5">
-                  <div className="w-1.5 h-1.5 bg-[#ff5252] rounded-full mr-1.5"></div>
-                  <span className="text-[0.5rem] text-[#ff5252] font-medium">Modo Sin Conexión</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-1.5">
-              {!isOnline && (
-                <div className="flex items-center bg-[#ffab00]/20 text-[#ffab00] px-1.5 py-0.5 rounded text-[0.5rem] font-medium border border-[#ffab00]/30">
-                  <Zap size={10} className="mr-1" />
-                  <span>Sin conexión</span>
-                </div>
-              )}
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 font-sans">
+      <h1 className="text-xl font-bold mb-6 text-left text-blue-400 pl-2">
+        {currentUser?.storeName || currentUser?.storeId || 'Tienda'}
+      </h1>
 
-              {/* Scale Status Indicator */}
-              <div className={`flex items-center px-1.5 py-0.5 rounded text-[0.5rem] font-medium border ${
-                scaleStatus === 'connected' 
-                  ? 'bg-green-500/20 text-green-500 border-green-500/30' 
-                  : scaleStatus === 'error' 
-                    ? 'bg-red-500/20 text-red-500 border-red-500/30' 
-                    : 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
-              }`}>
-                {scaleStatus === 'connected' ? <Wifi size={10} className="mr-1" /> : <WifiOff size={10} className="mr-1" />}
-                <span>Balance: {scaleStatus}</span>
-              </div>
+      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-120px)]">
+        {/* Columna Principal (Izquierda) - Product Grid */}
+        <ProductGrid
+          products={productsForSale}
+          categories={categoryNames}
+          currentCategory={currentCategory}
+          searchQuery={searchTerm}
+          onProductSelect={handleProductSelect}
+          onCategoryChange={setCurrentCategory}
+          onSearchQueryChange={setSearchTerm}
+          onOpenCalculator={() => setIsCalculatorModalOpen(true)}
+          onOpenCatalog={() => setIsProductCollectionModalOpen(true)}
+          onOpenScanner={() => setIsScanning(true)}
+        />
 
-              <Button onClick={toggleFullscreen} variant="outline" className="p-1">
-                <Maximize size={14} />
-              </Button>
-            </div>
-          </header>
+        {/* Columna Lateral (Derecha) */}
+        <div className="flex flex-col lg:w-96 w-full space-y-4">
+          {/* Módulo CartPanel */}
+          <CartPanel
+            cart={cart.map(item => ({
+              ...item,
+              total: item.price * item.quantity
+            }))}
+            onQuantityChange={handleQuantityChange}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
+            onCheckout={handleCheckoutClick}
+            onItemClick={handleItemClick}
+            selectedCartItem={selectedCartItem}
+          />
 
-          <div className="bg-[#282837] rounded-lg border border-[#3a3a4a] flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-hidden min-h-0">
-              <table className="w-full h-full">
-                <thead className="flex-shrink-0">
-                  <tr className="border-b border-[#3a3a4a]">
-                    <th className="py-2 px-3 text-left text-[#a0a0b0] text-[0.7rem] font-semibold uppercase tracking-wider">Cantidad</th>
-                    <th className="py-2 px-3 text-left text-[#a0a0b0] text-[0.7rem] font-semibold uppercase tracking-wider">Producto</th>
-                    <th className="py-2 px-3 text-right text-[#a0a0b0] text-[0.7rem] font-semibold uppercase tracking-wider">Precio</th>
-                    <th className="py-2 px-3 text-right text-[#a0a0b0] text-[0.7rem] font-semibold uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="overflow-y-auto flex-1 min-h-0 max-h-60">
-                  {cart.map((item) => (
-                    <tr key={item.id} className="border-b border-[#3a3a4a] last:border-none">
-                      <td className="py-2 px-3">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => handleQuantityChange(item.id, e)}
-                          min="1"
-                          className="w-12 border rounded text-center bg-[#1D1D27] text-[#F0F0F0] border-[#3a3a4a] focus:ring-2 focus:ring-[#8A2BE2] focus:border-[#8A2BE2] text-sm"
-                        />
-                      </td>
-                      <td className="py-2 px-3 font-medium text-[#F0F0F0] text-sm truncate max-w-[80px]">{item.name}</td>
-                      <td className="py-2 px-3 text-right font-semibold text-[#F0F0F0] text-sm">
-                        ${(item.price * item.quantity).toLocaleString()}
-                      </td>
-                      <td className="py-2 px-3 text-right">
-                        <Button 
-                          onClick={() => removeFromCart(item.id)} 
-                          variant="ghost"
-                          size="sm"
-                          className="text-[#a0a0b0] hover:text-[#ff5252]"
-                        >
-                          <X size={14} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="mt-2 flex flex-col xs:flex-row justify-between items-center gap-3 pt-3 border-t border-[#3a3a4a] flex-shrink-0">
-              <div className="flex flex-wrap gap-1.5">
-                <Button onClick={() => setIsScheduleVisitModalOpen(true)} variant="outline" className="font-medium flex items-center space-x-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm"><Calendar size={14}/><span>Agendar</span></Button>
-                <Button onClick={() => setIsDiscountModalOpen(true)} variant="outline" className="font-medium flex items-center space-x-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm"><Percent size={14}/><span>Descuento</span></Button>
-                <Button onClick={() => setIsNoteModalOpen(true)} variant="outline" className="font-medium flex items-center space-x-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm"><FileText size={14}/><span>Nota</span></Button>
-                {canAccessEmployeeConsumption && (
-                  <Button onClick={() => setIsEmployeeConsumptionModalOpen(true)} variant="outline" className="font-medium flex items-center space-x-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm">
-                    <UserCircle size={14}/><span>Consumo</span>
-                  </Button>
-                )}
-              </div>
-              <div className="text-right text-[#F0F0F0]">
-                <p className="text-[#a0a0b0] text-xs">Subtotal: ${subtotal.toLocaleString()}</p>
-                <p className="text-lg font-bold text-[#F0F0F0]">Total: ${subtotal.toLocaleString()}</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2 mt-2 flex-shrink-0">
-              <Button onClick={() => setIsPreviousSalesModalOpen(true)} variant="outline" className="font-medium flex-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm transition-all duration-200 hover:scale-[1.02]">
-                <Printer size={14} className="mr-1.5" />
-                Ventas Anteriores
-              </Button>
-              <Button onClick={() => setIsCashClosingModalOpen(true)} variant="outline" className="font-medium flex-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm transition-all duration-200 hover:scale-[1.02]">
-                <FileText size={14} className="mr-1.5" />
-                Cierre de Caja
-              </Button>
-              <Button onClick={() => setIsWithdrawalModalOpen(true)} variant="outline" className="font-medium flex-1 text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] text-sm transition-all duration-200 hover:scale-[1.02]">
-                <CreditCard size={14} className="mr-1.5" />
-                Retiro
-              </Button>
-            </div>
-            
-            <Button 
-              onClick={handleCheckoutClick} 
-              className="w-full mt-2 py-2 text-base bg-[#8A2BE2] hover:bg-purple-700 flex-shrink-0 transition-all duration-200 hover:scale-[1.02] shadow-md hover:shadow-lg" 
-              size="lg"
-              variant="primary"
-              disabled={offlineMode && cart.length === 0}
+          {/* Botones adicionales */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            <button
+              onClick={() => setIsScheduleVisitModalOpen(true)}
+              className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
             >
-              {offlineMode ? 'Modo Sin Conexión - Procesar Pago Local' : `Procesar Pago - ${subtotal.toLocaleString()}`}
-            </Button>
-          </div>
-        </div>
-
-        <div className="w-full md:w-1/3 flex flex-col bg-[#282837] rounded-lg border border-[#3a3a4a] p-3 min-h-0 flex-1">
-          <div className="flex justify-between items-center mb-3 flex-shrink-0">
-            <div className="flex space-x-1.5">
-              <Button onClick={() => setIsCalculatorModalOpen(true)} size="sm" className="bg-[#1D1D27] hover:bg-[#3a3a4a] text-[#F0F0F0] border border-[#3a3a4a] transition-all duration-200 hover:scale-105"><Calculator size={16} /></Button>
-              <Button onClick={() => setIsProductCollectionModalOpen(true)} size="sm" className="bg-[#1D1D27] hover:bg-[#3a3a4a] text-[#F0F0F0] border border-[#3a3a4a] transition-all duration-200 hover:scale-105"><Package size={16} /></Button>
-              <Button onClick={toggleScanning} size="sm" className="bg-[#1D1D27] hover:bg-[#3a3a4a] text-[#F0F0F0] border border-[#3a3a4a] transition-all duration-200 hover:scale-105">
-                <Scan size={16} />
-              </Button>
-            </div>
-            <Input icon={Search} type="text" placeholder="Buscar producto..." className="flex-1 ml-2 max-w-xs bg-[#1D1D27] text-[#F0F0F0] border border-[#3a3a4a] placeholder-[#a0a0b0] text-sm" onChange={(e) => setSearchTerm(e.target.value)} />
-          </div>
-          
-          {/* Scale Status Banner */}
-          <div className={`p-2 rounded-md border text-xs flex items-center justify-between mb-3 flex-shrink-0 ${
-            scaleStatus === 'connected' 
-              ? 'bg-green-500/10 border-green-500/30 text-green-300' 
-              : scaleStatus === 'error' 
-                ? 'bg-red-500/10 border-red-500/30 text-red-300' 
-                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
-          }`}>
-            <div className="flex items-center">
-              <Scale size={14} className="mr-1.5" />
-              <span className="font-medium">Balanza: {scaleStatusMessage}</span>
-            </div>
-            <div className="flex space-x-1.5">
-              <Button 
-                size="sm" 
-                variant={scaleService.isConnected ? "outline" : "default"}
-                onClick={() => {
-                  if (scaleService.isConnected) {
-                    scaleService.disconnect();
-                  } else {
-                    scaleService.connect('simulate');
-                  }
-                }}
-                className={scaleService.isConnected 
-                  ? "border border-[#3a3a4a] text-[#F0F0F0] hover:bg-[#3a3a4a] text-xs" 
-                  : "bg-[#8A2BE2] text-white hover:bg-purple-700 text-xs"
-                }
+              <Calendar size={14}/><span>Agendar</span>
+            </button>
+            <button
+              onClick={() => setIsNoteModalOpen(true)}
+              className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
+            >
+              <FileText size={14}/><span>Nota</span>
+            </button>
+            <button
+              onClick={() => setIsDiscountModalOpen(true)}
+              className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
+            >
+              <Percent size={14}/><span>Descuento</span>
+            </button>
+            {canAccessEmployeeConsumption && (
+              <button
+                onClick={() => setIsEmployeeConsumptionModalOpen(true)}
+                className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
               >
-                {scaleService.isConnected ? 'Desconectar' : 'Conectar'}
-              </Button>
-            </div>
-          </div>
-
-          {isScanning && (
-                  <ScannerComponent
-                    onScan={handleScan}
-                    onClose={() => setIsScanning(false)}
-                  />
-                )}
-          <div className="flex flex-wrap gap-1.5 mb-3 flex-shrink-0">
-            {categories.slice(0, 6).map(c => <Button key={c.id} variant="outline" size="sm" className="py-0.5 font-medium text-xs whitespace-nowrap text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] transition-all duration-200 hover:scale-105">{c.name}</Button>)}
-            {categories.length > 6 && (
-              <Button variant="outline" size="sm" className="py-0.5 font-medium text-xs text-[#F0F0F0] border-[#3a3a4a] hover:bg-[#3a3a4a] transition-all duration-200 hover:scale-105" onClick={() => setIsProductCollectionModalOpen(true)}>
-                +{categories.length - 6}
-              </Button>
+                <UserCircle size={14}/><span>Consumo</span>
+              </button>
             )}
           </div>
-          
-          <div className="flex-1 overflow-hidden min-h-0" style={{ minHeight: 0, height: 'calc(100% - 150px)' }}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 overflow-y-auto" style={{ height: '100%', padding: '6px', maxHeight: '100%' }}>
-              {productsForSale.map(p => (
-                <div 
-                  key={p.id} 
-                  className={`relative rounded-lg p-3 text-center cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:-translate-y-1 shadow-md border ${
-                    p.stockInLocation === 0 ? "bg-[#3a3a4a] border-[#5c5c6c] cursor-not-allowed opacity-60" : "bg-[#282837] border-[#3a3a4a] hover:bg-[#3a3a4a] hover:border-blue-400"
-                  } ${
-                    (p.unit === "kg" || p.unit === "gr" || p.unit === "lb" || p.unit === "oz") ? "ring-2 ring-[#8A2BE2] ring-opacity-50" : ""
-                  }`}
-                  onClick={() => {
-                    // En modo de prueba, permitir agregar productos al carrito incluso si no hay stock
-                    if (p.stockInLocation > 0 || process.env.NODE_ENV === 'development') {
-                      // Check if product is sold by weight
-                      if (p.unit === "kg" || p.unit === "gr" || p.unit === "lb" || p.unit === "oz") {
-                        // Open weight modal instead of adding to cart
-                        openWeightModal(p);
-                      } else {
-                        // Add to cart normally for unit-based products
-                        addToCart(p);
-                      }
-                    } else {
-                      // Show message if no stock available
-                      alert(`No hay existencias disponibles para ${p.name}`);
-                    }
-                  }}
-                >
-                   <div className={`absolute top-1 right-1 text-[0.7rem] font-bold px-2 py-1 rounded-full ${
-                     p.stockInLocation === 0 ? "bg-[#666666] text-white" :
-                     p.stockInLocation < 10 ? "bg-[#ff5252] text-white" : 
-                     p.stockInLocation < 20 ? "bg-[#ffab00] text-[#1f1f1f]" : 
-                     "bg-[#00c853] text-white"
-                   }`}>
-                    {p.stockInLocation} {p.unit === 'unidad' ? '' : p.unit || ''}
-                  </div>
-                  <div className="bg-[#3a3a4a] rounded-lg w-14 h-14 mx-auto mb-2 flex items-center justify-center">
-                    {p.image ? (
-                      <img src={p.image} alt={p.name} className="w-10 h-10 object-contain rounded" />
-                    ) : (
-                      <Package className="w-8 h-8 text-[#a0a0b0]" />
-                    )}
-                  </div>
-                  <p className="text-[0.85rem] font-semibold text-[#F0F0F0] truncate">{p.name}</p>
-                  <p className="text-[0.9rem] font-bold text-[#8A2BE2]">${p.price}{(p.unit === 'kg' || p.unit === 'gr' || p.unit === 'lb' || p.unit === 'oz') ? `/${p.unit}` : ''}</p>
-                  {p.unit !== 'unidad' && (p.unit === 'kg' || p.unit === 'gr' || p.unit === 'lb' || p.unit === 'oz') && (
-                    <p className="text-[0.7rem] text-[#a0a0b0] mt-1">Por {p.unit}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <Button className="w-full mt-3 py-2 font-semibold flex items-center justify-center space-x-1.5 bg-[#8A2BE2] hover:bg-purple-700 text-sm flex-shrink-0 shadow-md hover:shadow-lg transition-all duration-200" onClick={() => setIsProductFormModalOpen(true)}>
-            <Plus size={14} />
-            <span>Agregar Producto</span>
-          </Button>
+
+          {/* Módulo Keypad */}
+          <Keypad
+            onNumberInput={handleNumberInput}
+            onFunction={handleKeypadFunction}
+            keypadInput={displayKeypadInput}
+            selectedCartItem={selectedCartItem}
+          />
         </div>
+      </div>
+
+      {/* Aviso de item seleccionado para el Keypad */}
+      {selectedCartItem && (
+        <div className="fixed bottom-0 left-0 right-0 bg-blue-900/80 backdrop-blur-sm p-2 text-center text-sm font-medium text-white border-t border-blue-600">
+          <span className="font-bold">Ítem Seleccionado:</span> {selectedCartItem.name} (Cant: {selectedCartItem.quantity})
+        </div>
+      )}
+
+      {/* Scanner Modal */}
+      {isScanning && (
+        <ScannerComponent
+          onScan={(scannedBarcode) => {
+            if (!scannedBarcode || scannedBarcode.trim() === '') return;
+            const product = productsForSale.find(p => p.barcode === scannedBarcode);
+            if (product) {
+              handleProductSelect(product);
+            } else {
+              alert(`Producto con código ${scannedBarcode} no encontrado.`);
+            }
+            setIsScanning(false);
+          }}
+          onClose={() => setIsScanning(false)}
+        />
+      )}
 
         {lastSale && (
           <Modal isOpen={postPaymentModalOpen} onClose={() => setPostPaymentModalOpen(false)} title="Opciones de Ticket">
@@ -590,10 +558,10 @@ export default function POSPage() {
         </Modal>
 
         <Modal isOpen={isPaymentMethodModalOpen} onClose={() => setIsPaymentMethodModalOpen(false)} title="Procesar Pago">
-          <PaymentModal 
+          <PaymentModal
             onClose={() => setIsPaymentMethodModalOpen(false)}
             onPayment={handlePaymentSuccess}
-            total={subtotal}
+            total={cartTotal}
           />
         </Modal>
 
@@ -621,15 +589,15 @@ export default function POSPage() {
           <ProductCollectionModal onClose={() => setIsProductCollectionModalOpen(false)} />
         </Modal>
 
-        <WeightModal 
-          isOpen={isWeightModalOpen} 
-          onClose={closeWeightModal} 
+        <WeightModal
+          isOpen={isWeightModalOpen}
+          onClose={closeWeightModal}
           product={weighingProduct}
           onAddToCart={(weight) => {
             addToCartWithWeight(weighingProduct, weight);
             closeWeightModal();
           }}
         />
-      </main>
+    </div>
   );
 }

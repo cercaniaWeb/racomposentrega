@@ -1,10 +1,11 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
-const ConfirmationDialog = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title = "Confirmar acción", 
+const ConfirmationDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Confirmar acción",
   message = "¿Estás seguro de que deseas continuar?",
   confirmText = "Confirmar",
   cancelText = "Cancelar"
@@ -62,6 +63,16 @@ const ConfirmationDialog = ({
       </div>
     </div>
   );
+};
+
+ConfirmationDialog.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  message: PropTypes.string,
+  confirmText: PropTypes.string,
+  cancelText: PropTypes.string
 };
 
 export default ConfirmationDialog;

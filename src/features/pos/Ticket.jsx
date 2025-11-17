@@ -1,7 +1,6 @@
 import React from 'react';
 import useAppStore from '../../store/useAppStore';
 import QRCode from 'react-qr-code';
-import logo from '../../utils/logo.png';
 
 const Ticket = ({ saleDetails }) => {
   const { cart, total, date, saleId, subtotal, discount, note } = saleDetails;
@@ -12,7 +11,9 @@ const Ticket = ({ saleDetails }) => {
   return (
     <div className={`bg-white p-6 rounded-lg shadow-lg max-w-sm mx-auto my-4 font-mono text-${fontSize} text-gray-900`}>
       <div className="text-center mb-4">
-        <img src={logoUrl || logo} alt="Store Logo" className="mx-auto h-16 mb-2" />
+        {logoUrl && (
+          <img src={logoUrl} alt="Store Logo" className="mx-auto h-16 mb-2" onError={(e) => { e.target.style.display = 'none'; }} />
+        )}
         <h2 className="text-lg font-bold">{headerText}</h2>
         <p>Ticket de Venta</p>
         <p className="text-xs">{new Date(date).toLocaleString()}</p>

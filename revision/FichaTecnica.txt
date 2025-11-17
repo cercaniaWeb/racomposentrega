@@ -1,0 +1,147 @@
+Ficha Técnica de Módulos del Sistema POS de Abarrotes
+
+Este documento describe la estructura, funcionalidad y estándares de diseño para los tres componentes principales del sistema de Punto de Venta (POS), desarrollado en React y Tailwind CSS, siguiendo el estándar de diseño oscuro (Dark Mode).
+
+1. Módulo: ProductGrid (Cuadrícula de Productos)
+
+Propósito: Interfaz principal para la búsqueda, filtrado y selección de artículos para añadir al carrito.
+
+Categoría
+
+Especificación
+
+Identificador
+
+ProductGrid
+
+Ubicación
+
+Columna principal (izquierda), ocupa el espacio flexible (flex-1).
+
+Diseño Base
+
+Contenedor oscuro (bg-gray-800), esquinas redondeadas (rounded-xl), borde (border-gray-700).
+
+Responsividad
+
+Utiliza CSS Grid, adaptándose de 2 columnas (móvil) a 4 columnas (desktop) para los productos.
+
+Funcionalidades
+
+1. Búsqueda: Campo de texto (<input type="text">) con ícono de lupa (Search) y estilo oscuro (bg-gray-700). Permite filtrar en tiempo real.
+
+
+
+2. Filtrado por Categoría: Botones tipo píldora (rounded-full) que permiten cambiar la categoría de productos. El botón activo usa el color primario azul (bg-blue-600).
+
+
+
+3. Tarjetas de Producto: Botones individuales con nombre, categoría y precio. Al hacer clic, activan onProductSelect. Diseño: Precio en fuente extragrande y color destacado verde (text-green-400).
+
+Entradas (Props)
+
+filteredProducts (Array de productos filtrados), currentCategory (String), searchQuery (String).
+
+Salidas (Callbacks)
+
+onProductSelect(product), onCategoryChange(category), onSearchQueryChange(query).
+
+2. Módulo: CartPanel (Panel del Carrito)
+
+Propósito: Muestra el detalle del pedido actual, los totales (subtotal, impuestos, total) y las acciones de pago/cierre.
+
+Categoría
+
+Especificación
+
+Identificador
+
+CartPanel
+
+Ubicación
+
+Columna lateral (derecha), ancho fijo (lg:w-96).
+
+Diseño Base
+
+Contenedor oscuro (bg-gray-800), cabecera con ícono de carrito (ShoppingCart) y color azul (text-blue-400).
+
+Áreas Clave
+
+1. Lista de Artículos: Área con scroll vertical (overflow-y-auto). Cada artículo tiene botones + y - para ajustar la cantidad y un botón XCircle para eliminar.
+
+
+
+2. Sección de Totales: Resumen de cálculos (Subtotal, Impuestos) con separación de línea. El TOTAL es destacado con fuente grande y color verde (text-green-400).
+
+
+
+3. Botones de Acción: "Procesar Cobro" (Primario: bg-blue-600) y "Vaciar Carrito" (Secundario/Peligro: text-red-400).
+
+Validaciones
+
+Los botones de acción deben estar deshabilitados (disabled) si el cart está vacío.
+
+Lógica Interna
+
+Calcula el subtotal, taxAmount (13% fijo) y el total (subtotal + impuestos) utilizando useMemo.
+
+Entradas (Props)
+
+cart (Array de artículos del carrito).
+
+Salidas (Callbacks)
+
+onQuantityChange(itemId, delta), onRemoveItem(itemId), onClearCart(), onCheckout() (activa el proceso de cobro).
+
+3. Módulo: Keypad (Teclado Numérico)
+
+Propósito: Proporcionar una interfaz táctil para la entrada numérica de cantidades, precios o códigos, y funciones de acción rápida.
+
+Categoría
+
+Especificación
+
+Identificador
+
+Keypad
+
+Ubicación
+
+Debajo del CartPanel en la columna lateral (derecha).
+
+Diseño Base
+
+Contenedor oscuro (bg-gray-800), diseño de cuadrícula (grid-cols-4).
+
+Interacción
+
+Botones numéricos (0-9, .) y funcionales. Todos usan bg-gray-700 y hover:bg-gray-600.
+
+Funciones
+
+1. Borrar: Botón X en color rojo (text-red-400).
+
+
+
+2. Acciones Rápidas: Botones especializados para aplicar el valor introducido (keypadInput) al artículo seleccionado:
+
+
+
+- "Establecer Cant." (Primario: bg-blue-600)
+
+
+
+- "Cambiar Precio" (Secundario: bg-green-600)
+
+Integración con App
+
+Muestra el valor de entrada actual (keypadInput) en la barra superior.
+
+Entradas (Props)
+
+N/A (Solo recibe la lógica de manejo).
+
+Salidas (Callbacks)
+
+onNumberInput(value) (Maneja números y el punto decimal), onFunction(fnName) (Maneja backspace, set_qty, set_price).

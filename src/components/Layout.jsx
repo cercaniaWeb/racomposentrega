@@ -1,17 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import useNotificationStore from '../features/notifications/store/useNotificationStore';
-import { 
-  ShoppingCart, 
-  BarChart3, 
-  Wallet, 
-  Truck, 
-  Users, 
-  Bell, 
-  Search, 
-  Plus, 
-  CreditCard, 
-  Package, 
-  User, 
+import {
+  ShoppingCart,
+  BarChart3,
+  Wallet,
+  Truck,
+  Users,
+  Bell,
+  Search,
+  Plus,
+  CreditCard,
+  Package,
+  User,
   LogOut,
   Menu,
   X,
@@ -31,7 +32,7 @@ const Layout = ({ children }) => {
   const notificationsRef = useRef(null);
   const userMenuRef = useRef(null);
   
-  const { notifications, clearAllNotifications } = useNotificationStore();
+  const { notifications, clearAllNotifications, removeNotification } = useNotificationStore();
   
   // Close menus when clicking outside
   useEffect(() => {
@@ -84,7 +85,7 @@ const Layout = ({ children }) => {
         <div className="flex items-center space-x-8">
           <div className="flex items-center space-x-3">
             <img 
-              src="/src/utils/logopos.png" 
+              src="/src/utils/logo.png"
               alt="Logo RACOM POS" 
               className="w-8 h-8 object-contain"
             />
@@ -151,8 +152,8 @@ const Layout = ({ children }) => {
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.length > 0 ? (
                     notifications.map((notification) => (
-                      <div 
-                        key={notification.id} 
+                      <div
+                        key={notification.id}
                         className="p-4 border-b border-[#3a3a4a] hover:bg-[#1D1D27] transition-colors"
                       >
                         <div className="flex items-start space-x-3">
@@ -169,6 +170,13 @@ const Layout = ({ children }) => {
                             <p className="text-[#F0F0F0] text-sm">{notification.message}</p>
                             <p className="text-[#a0a0b0] text-xs mt-1">Hace un momento</p>
                           </div>
+                          <button
+                            onClick={() => removeNotification(notification.id)}
+                            className="text-[#a0a0b0] hover:text-[#F0F0F0] ml-2"
+                            title="Cerrar notificación"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     ))
@@ -267,6 +275,10 @@ const Layout = ({ children }) => {
       </div>
     </div>
   );
+};
+
+Layout.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 export default Layout;

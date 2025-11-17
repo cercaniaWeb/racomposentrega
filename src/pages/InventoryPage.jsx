@@ -190,10 +190,12 @@ const InventoryPage = () => {
               </thead>
               <tbody>
                 {inventoryGroups.map((item) => (
-                  <tr 
-                    key={`${item.productId}-${item.locationId}`} 
+                  <tr
+                    key={`${item.productId}-${item.locationId}`}
                     className={`border-b border-[#3a3a4a] hover:bg-[#1D1D27] transition-colors ${
-                      item.totalQuantity <= item.minStockThreshold ? 'bg-red-500 bg-opacity-10' : ''
+                      item.totalQuantity <= 0 ? 'bg-red-500 bg-opacity-20' :
+                      item.totalQuantity <= item.minStockThreshold ? 'bg-orange-500 bg-opacity-15' :
+                      item.totalQuantity <= item.minStockThreshold * 1.5 ? 'bg-yellow-500 bg-opacity-10' : ''
                     }`}
                   >
                     <td className="py-4 px-6 text-[#F0F0F0] font-medium">
@@ -204,13 +206,26 @@ const InventoryPage = () => {
                     </td>
                     <td className="py-4 px-6 text-[#a0a0b0]">{item.productCategory}</td>
                     <td className="py-4 px-6">
-                      <span className={`font-bold ${
-                        item.totalQuantity <= item.minStockThreshold ? 'text-red-500' : 
-                        item.totalQuantity <= item.minStockThreshold * 1.5 ? 'text-yellow-500' : 
-                        'text-green-500'
-                      }`}>
-                        {item.totalQuantity}
-                      </span>
+                      <div className="flex items-center">
+                        <span className={`font-bold ${
+                          item.totalQuantity <= 0 ? 'text-red-400' :
+                          item.totalQuantity <= item.minStockThreshold ? 'text-red-500' :
+                          item.totalQuantity <= item.minStockThreshold * 1.5 ? 'text-yellow-500' :
+                          'text-green-500'
+                        }`}>
+                          {item.totalQuantity}
+                        </span>
+                        {item.totalQuantity <= item.minStockThreshold && (
+                          <span className="ml-2 text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-400">
+                            Bajo
+                          </span>
+                        )}
+                        {item.totalQuantity === 0 && (
+                          <span className="ml-2 text-xs px-2 py-1 rounded-full bg-red-600/30 text-red-300">
+                            Agotado
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-[#F0F0F0]">{item.minStockThreshold}</td>
                     <td className="py-4 px-6 text-[#F0F0F0]">{item.locationName}</td>

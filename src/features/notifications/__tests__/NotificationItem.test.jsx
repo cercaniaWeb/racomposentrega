@@ -53,7 +53,7 @@ describe('NotificationItem', () => {
 
   it('calls onDismiss when close button is clicked', () => {
     render(<NotificationItem {...defaultProps} type="info" />);
-    const dismissButton = screen.getByLabelText('Dismiss notification');
+    const dismissButton = screen.getByLabelText('Cerrar notificación');
     fireEvent.click(dismissButton);
     expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
     expect(defaultProps.onDismiss).toHaveBeenCalledWith('1');

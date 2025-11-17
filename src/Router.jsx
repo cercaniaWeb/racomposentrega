@@ -18,6 +18,9 @@ import ReceiptPage from './pages/ReceiptPage';
 
 import ClientsPage from './pages/ClientsPage';
 import ExpensesPage from './pages/ExpensesPage';
+import AddStoreForm from './features/admin/AddStoreForm';
+import PasswordResetHandler from './features/auth/PasswordResetHandler';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 const Router = () => {
   return (
@@ -25,6 +28,8 @@ const Router = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<PasswordResetHandler />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/receipt" element={<ReceiptPage />} />
 
@@ -175,6 +180,13 @@ const Router = () => {
             <ProtectedRoute roles={['admin', 'gerente']}>
               <Layout activeModule="clients">
                 <ClientsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="add-store" element={
+            <ProtectedRoute roles={['admin', 'dev']}>
+              <Layout activeModule="settings">
+                <AddStoreForm />
               </Layout>
             </ProtectedRoute>
           } />

@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import useAppStore from '../../store/useAppStore';
 
 const Input = ({ type = 'text', placeholder, value, onChange, className = '', icon: Icon, prefix, ...rest }) => {
@@ -25,6 +26,16 @@ const Input = ({ type = 'text', placeholder, value, onChange, className = '', ic
       />
     </div>
   );
+};
+
+Input.propTypes = {
+  type: PropTypes.string,
+  placeholder: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func,
+  className: PropTypes.string,
+  icon: PropTypes.elementType,
+  prefix: PropTypes.string
 };
 
 export default Input;

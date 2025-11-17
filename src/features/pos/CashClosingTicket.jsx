@@ -1,12 +1,11 @@
 
 import React from 'react';
 import useAppStore from '../../store/useAppStore';
-import logo from '../../utils/logo.png';
 
 const CashClosingTicket = ({ cashClosingDetails }) => {
   const { ticketSettings } = useAppStore();
   const { logoUrl } = ticketSettings || {};
-  
+
   // Safely destructure with default values
   const {
     date = new Date().toISOString(),
@@ -22,7 +21,9 @@ const CashClosingTicket = ({ cashClosingDetails }) => {
   return (
     <div className="bg-white p-6 font-mono text-sm text-gray-900">
       <div className="text-center mb-4">
-        <img src={logoUrl || logo} alt="Company Logo" className="mx-auto h-16 mb-2" />
+        {logoUrl && (
+          <img src={logoUrl} alt="Company Logo" className="mx-auto h-16 mb-2" onError={(e) => { e.target.style.display = 'none'; }} />
+        )}
         <h2 className="text-lg font-bold text-gray-900">Cierre de Caja</h2>
         <p className="text-gray-700">Fecha: {date ? new Date(date).toLocaleString() : new Date().toLocaleString()}</p>
         <p className="text-gray-700">Cajero: {cashier || 'Desconocido'}</p>

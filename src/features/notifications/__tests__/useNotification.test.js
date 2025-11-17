@@ -38,6 +38,9 @@ describe('useNotification', () => {
       type: 'success',
       message: 'Operation successful',
       duration: 5000,
+      title: 'Success',
+      persistent: false,
+      timestamp: expect.any(String)
     });
   });
 
@@ -56,7 +59,10 @@ describe('useNotification', () => {
       id: 'error-id',
       type: 'error',
       message: 'Operation failed',
-      duration: 5000,
+      duration: 10000,
+      title: 'Error',
+      persistent: false,
+      timestamp: expect.any(String)
     });
   });
 
@@ -75,7 +81,10 @@ describe('useNotification', () => {
       id: 'warning-id',
       type: 'warning',
       message: 'Warning message',
-      duration: 5000,
+      duration: 8000,
+      title: 'Warning',
+      persistent: false,
+      timestamp: expect.any(String)
     });
   });
 
@@ -95,6 +104,9 @@ describe('useNotification', () => {
       type: 'info',
       message: 'Info message',
       duration: 5000,
+      title: 'Info',
+      persistent: false,
+      timestamp: expect.any(String)
     });
   });
 

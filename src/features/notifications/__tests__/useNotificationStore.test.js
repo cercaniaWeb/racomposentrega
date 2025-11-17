@@ -35,6 +35,9 @@ describe('useNotificationStore', () => {
       type: 'success',
       message: 'Test message',
       duration: 5000,
+      title: 'Success',
+      persistent: false,
+      timestamp: expect.any(String)
     });
   });
 

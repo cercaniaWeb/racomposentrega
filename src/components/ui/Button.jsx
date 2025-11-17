@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import useAppStore from '../../store/useAppStore';
 
 const Button = ({ children, onClick, className = '', variant = 'primary', size = 'md', disabled = false }) => {
@@ -48,6 +49,15 @@ const Button = ({ children, onClick, className = '', variant = 'primary', size =
       {children}
     </button>
   );
+};
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  onClick: PropTypes.func,
+  className: PropTypes.string,
+  variant: PropTypes.oneOf(['primary', 'secondary', 'success', 'danger', 'outline', 'ghost']),
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  disabled: PropTypes.bool
 };
 
 export default Button;

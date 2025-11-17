@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 const AlertModal = ({ isOpen, onClose, title = "Notificación", message, type = "info", confirmText = "Aceptar" }) => {
   const typeClasses = {
@@ -58,6 +59,15 @@ const AlertModal = ({ isOpen, onClose, title = "Notificación", message, type = 
       </div>
     </div>
   );
+};
+
+AlertModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  message: PropTypes.string.isRequired,
+  type: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
+  confirmText: PropTypes.string
 };
 
 export default AlertModal;

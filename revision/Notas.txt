@@ -1,0 +1,27 @@
+Las notificaciones no se muestran en el panel de notificaciones , algunas si aparecen , pero inmediatamwente desaresen ... esa funcion debe ser para las notificaciines que se muestrab en pantalla , pero estas de ese icono deben ser o estar hasta que las leamos y borremos , aqui es parte del flujo de traslados ya que por ahi se le notifica a las personas de tienda que se les solicito untraslado  al momento de dar click en la notificacion nos lleve al evento.
+
+En configuracion debe de aparecer los datos de la tienda en la que estamos no unos genericos.
+
+En categorias deben aparecer las categorias existentes , y por supuesto poder eliominar o crear nuevas.
+
+En impresoras agregar el soporte para las basculas ya que tenemos productos por peso 
+
+
+Agendar Visita de Proveedor este modal no tiene bien ingrados los estilos , ya que tiene un fondo  blanco en una de sus secciones , de igual forma los botones.
+
+Los siguientes botones ya estan de mas$10
+$20
+$50
+$100
+$200
+$5000 , ya que tenemos los numericos compketos- 
+
+Si lo numerico que esta en tarjeta es por que a veces pagan cierta parte cib tarjeya y lo demas en efectivo esta bien , la comision se puede gestionar desde configuracion para que aparezca por dafault ya con la comision , es lo unico de comosion no hay iva ni nada de eso... 
+
+
+¡Transacción Exitosa!
+Total pagado: $108.48
+
+Cerrar y Continuar   este aparece  se pague o no , debe de aparecer si es que se realiza el pago e imprime ticket de lo contrario no 
+
+Falta la inclucion de la bascula como la teniamos... 

@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { X } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 
@@ -43,6 +44,16 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
       </div>
     </div>
   );
+};
+
+Modal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  children: PropTypes.node.isRequired,
+  size: PropTypes.oneOf([
+    'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', 'full'
+  ])
 };
 
 export default Modal;

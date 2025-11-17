@@ -11,8 +11,8 @@ vi.mock('uuid', () => ({
 
 // Mock NotificationItem to simplify testing NotificationContainer's logic
 vi.mock('../components/NotificationItem', () => ({
-  default: vi.fn(({ message, onDismiss }) => (
-    <div data-testid="notification-item" onClick={onDismiss}>
+  default: vi.fn(({ message, onDismiss, id }) => (
+    <div data-testid="notification-item" onClick={() => onDismiss(id)}>
       {message}
     </div>
   )),
