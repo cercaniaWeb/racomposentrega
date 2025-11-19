@@ -362,12 +362,13 @@ export const getUser = async (id) => {
 export const addUser = async (userData) => {
   const { password, ...userProperties } = userData;
 
-  // Si se proporciona una contraseña, crear el usuario en Supabase Auth
+  // Si se proporciona una contraseña, crear el usuario en Supabase Auth usando el Admin API
   if (password) {
-    // Crear usuario en Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Crear usuario en Supabase Auth usando el API administrativo
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: userProperties.email,
       password: password,
+      email_confirm: true, // Confirmar el email automáticamente para que pueda iniciar sesión inmediatamente
     });
 
     if (authError) {
@@ -376,13 +377,14 @@ export const addUser = async (userData) => {
     }
 
     // Extraer el ID del usuario recién creado
-    const userId = authData.user?.id || authData.user.id;
+    const userId = authData.user.id;
 
     // Mapear campos de camelCase a snake_case para la base de datos
     const { storeId, ...otherProps } = userProperties;
     const userDataToInsert = {
       id: userId,  // Usar el ID de Supabase Auth
       ...otherProps,
+      role: otherProps.role || 'cajera', // Asegurarse de que tenga un rol por defecto
       store_id: storeId || null, // Mapear a snake_case
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -408,6 +410,7 @@ export const addUser = async (userData) => {
     const { storeId, ...otherProps } = userProperties;
     const userDataToInsert = {
       ...otherProps,
+      role: otherProps.role || 'cajera', // Asegurarse de que tenga un rol por defecto
       store_id: storeId || null, // Mapear a snake_case
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
