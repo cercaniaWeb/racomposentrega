@@ -131,6 +131,7 @@ const UserFormModal = ({ user, onClose, onSuccess }) => {
             <option value="cajera">Cajera</option>
             <option value="gerente">Gerente</option>
             <option value="admin">Administrador</option>
+            <option value="dev">Desarrollador</option>
           </select>
         </div>
 
