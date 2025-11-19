@@ -45,12 +45,28 @@ RECOOM POS es un sistema especializado de Punto de Venta diseñado para tiendas 
 
 ## Configuración de Entorno
 
+### Desarrollo Local
+
 Crear un archivo `.env.local` con las credenciales de Supabase:
 
 ```env
 VITE_SUPABASE_URL=tu_url_de_supabase_aquí
 VITE_SUPABASE_ANON_KEY=tu_clave_anon_de_supabase_aquí
 ```
+
+> **Nota de Seguridad:** Nunca subas archivos `.env` con credenciales reales al repositorio. El archivo `.gitignore` incluye patrones para evitar esto.
+
+### Despliegue en Netlify
+
+Para desplegar en Netlify, debes configurar las variables de entorno en la configuración del sitio:
+
+1. Ve a tu sitio en Netlify
+2. Navega a `Settings` > `Build & deploy` > `Environment`
+3. Agrega las siguientes variables:
+   - `VITE_SUPABASE_URL`: Tu URL de Supabase
+   - `VITE_SUPABASE_ANON_KEY`: Tu clave anónima de Supabase
+
+También puedes crear un archivo `.env.example` como plantilla (como se incluye en este proyecto) para saber qué variables son necesarias.
 
 ---
 
