@@ -11,17 +11,33 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { handleLogin } = useAppStore();
 
-  // Verificar si hay un token en la URL (proceso de recuperación de contraseña o verificación de email)
+  // Verificar si hay un token en la URL o en el hash (proceso de recuperación de contraseña o verificación de email)
   useEffect(() => {
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
-    
+    const searchType = searchParams.get('type');
+    const searchToken = searchParams.get('token');
+
+    // Verificar también parámetros del hash (después de #), que es donde Supabase
+    // coloca típicamente los parámetros de autenticación
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashType = hashParams.get('type');
+    const hashToken = hashParams.get('token');
+    const hashError = hashParams.get('error');
+
+    if (hashError) {
+      // No hacer nada si hay un error en el hash, dejar que el componente maneje el error
+      return;
+    }
+
+    // Priorizar los parámetros del hash (más comunes en Supabase)
+    const type = hashType || searchType;
+    const token = hashToken || searchToken;
+
     if (token && type === 'recovery') {
       // Si hay un token de recuperación, redirigir al componente de restablecimiento
       navigate('/auth/callback');
       return;
     }
-    
+
     if (token && (type === 'email' || type === 'signup')) {
       // Si es un token de verificación de email
       navigate('/auth/callback');

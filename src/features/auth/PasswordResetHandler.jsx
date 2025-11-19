@@ -30,6 +30,7 @@ const PasswordResetHandler = () => {
     const error = searchParams.get('error') || hashError;
     const errorDescription = searchParams.get('error_description') || hashErrorDescription;
 
+    // Si hay un error, mostrarlo
     if (error) {
       setMessage(`Error: ${errorDescription || 'El enlace no es válido o ha expirado.'}`);
       return;
@@ -39,12 +40,22 @@ const PasswordResetHandler = () => {
     const type = hashType || searchType;
     const token = hashToken || searchToken; // El token puede estar en hash o en search params
 
-    if (type === 'recovery' && token) {
+    // De acuerdo con la documentación de Supabase, para el proceso de recuperación,
+    // a veces el token ya ha sido consumido automáticamente por Supabase,
+    // pero el tipo de proceso sigue estando disponible
+    if (type === 'recovery') {
       setIsRecovery(true);
-    } else if ((type === 'email' || type === 'signup') && token) {
+    } else if (type === 'email' || type === 'signup') {
       setIsVerification(true);
+    } else if (!type && token) {
+      // Dependiendo del token, podría ser necesario otro tipo de manejo
+      setMessage('Proceso de autenticación detectado. Consulta tu administrador si necesitas asistencia.');
     }
-    // Si no hay tipo o token, o son inválidos, se mostrará el estado de acción no válida
+    // Si no hay tipo ni token, puede significar que el proceso ya se completó
+    // o que los parámetros no se pasaron correctamente
+    else {
+      setMessage('El enlace puede haber sido procesado o es inválido. Puedes intentar iniciar sesión normalmente.');
+    }
   }, [searchParams]);
 
   const handlePasswordReset = async (e) => {
