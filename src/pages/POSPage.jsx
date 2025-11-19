@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Plus,
   Printer,
@@ -17,7 +17,9 @@ import {
   Scale,
   Wifi,
   WifiOff,
-  BarChart2,
+  Lock,
+  Wallet,
+  ClipboardList,
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -51,10 +53,6 @@ import useNotification from '../features/notifications/hooks/useNotification';
 import ProductGrid from '../features/pos/components/ProductGrid';
 import CartPanel from '../features/pos/components/CartPanel';
 import Keypad from '../features/pos/components/Keypad';
-
-
-
-
 
 export default function POSPage() {
   const {
@@ -95,9 +93,6 @@ export default function POSPage() {
   const [postPaymentModalOpen, setPostPaymentModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [isProductCollectionModalOpen, setIsProductCollectionModalOpen] = useState(false);
-
-  // State for category filter
-  const [currentCategory, setCurrentCategory] = useState('Todo');
 
   // State for the new keypad functionality
   const [keypadInput, setKeypadInput] = useState('');
@@ -209,7 +204,6 @@ export default function POSPage() {
     console.log("Products in catalog:", productCatalog.map(p => ({ id: p.id, name: p.name })));
 
     // Mapear productos del catálogo con información adicional
-    // Importante: Ahora mostramos productos del catálogo GENERAL, pero con stock real o desarrollo
     let allCatalogProducts = productCatalog
       .map(product => {
         const calculatedStock = stockByProduct[String(product.id)] || 0;
@@ -218,7 +212,6 @@ export default function POSPage() {
           // Mapear campos de categoría asegurando el nombre correcto
           categoryId: product.categoryId || product.category_id,
           // Calcular stock en la ubicación actual (asegurar string para comparación)
-          // Si no hay stock registrado, mostrar stock temporal para desarrollo
           stockInLocation: calculatedStock > 0 ? calculatedStock : (process.env.NODE_ENV === 'development' ? 50 : 0),
           // Asegurar que el nombre del producto existe
           name: product.name || product.nombre || product.productName || 'Producto sin nombre',
@@ -231,8 +224,22 @@ export default function POSPage() {
 
     console.log("allCatalogProducts count:", allCatalogProducts.length);
 
-    // Filtrar productos por categoría y búsqueda (asegurar strings para la comparación)
-    let productsToShow = allCatalogProducts.filter(
+    // Si no hay productos en el catálogo, mostrar todos los productos disponibles en el store
+    if (allCatalogProducts.length === 0) {
+      console.log("No products in catalog, showing all available products");
+      // En lugar de crear productos de ejemplo aquí, usar los productos del catálogo general
+      allCatalogProducts = productCatalog.map(product => ({
+        ...product,
+        stockInLocation: process.env.NODE_ENV === 'development' ? 50 : 0, // Stock temporal en desarrollo
+        name: product.name || product.nombre || product.productName || 'Producto sin nombre',
+        categoryName: categories.find(c =>
+          c.id === (product.categoryId || product.category_id)
+        )?.name || 'Sin categoría'
+      }));
+    }
+
+    // Filtrar productos según la búsqueda (asegurar strings para la comparación)
+    const productsToShow = allCatalogProducts.filter(
       (product) =>
         String(product.name).toLowerCase().includes(String(searchTerm).toLowerCase()) ||
         String(product.nombre || '').toLowerCase().includes(String(searchTerm).toLowerCase()) ||
@@ -240,17 +247,10 @@ export default function POSPage() {
         String(product.description || '').toLowerCase().includes(String(searchTerm).toLowerCase())
     );
 
-    // Filtrar por categoría si no es 'Todo'
-    if (currentCategory !== 'Todo') {
-      productsToShow = productsToShow.filter(product =>
-        product.categoryName === currentCategory || product.category === currentCategory
-      );
-    }
-
     console.log("productsToShow count:", productsToShow.length);
 
     return productsToShow;
-  }, [productCatalog, inventoryBatches, currentUser, searchTerm, categories, currentCategory]);
+  }, [productCatalog, inventoryBatches, currentUser, searchTerm, categories]);
 
   // Show notification when going offline
   React.useEffect(() => {
@@ -312,21 +312,14 @@ export default function POSPage() {
   const handlePaymentSuccess = async (payment) => {
     const result = await handleCheckout(payment);
 
-    // Only open the post-payment modal if the checkout was successful
-    if (result && result.success !== false) {
-      // Handle offline mode result
-      if (result.offline) {
-        // Show a special message for offline transactions
-        alert('Venta procesada en modo sin conexión. Se sincronizará cuando haya conexión a Internet.');
-      }
-
-      setIsPaymentMethodModalOpen(false);
-      setPostPaymentModalOpen(true); // Open post-payment options modal
-    } else {
-      // Show error message if checkout failed
-      alert('Error al procesar el pago. Por favor inténtelo de nuevo.');
-      setIsPaymentMethodModalOpen(false);
+    // Handle offline mode result
+    if (result.offline) {
+      // Show a special message for offline transactions
+      alert('Venta procesada en modo sin conexión. Se sincronizará cuando haya conexión a Internet.');
     }
+
+    setIsPaymentMethodModalOpen(false);
+    setPostPaymentModalOpen(true); // Open post-payment options modal
   };
 
   const canAccessEmployeeConsumption = currentUser && (currentUser.role === 'admin' || currentUser.role === 'gerente');
@@ -417,19 +410,19 @@ export default function POSPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 font-sans">
-      <h1 className="text-xl font-bold mb-6 text-left text-blue-400 pl-2">
-        {currentUser?.storeName || currentUser?.storeId || 'Tienda'}
+      <h1 className="text-3xl font-extrabold mb-6 text-center text-blue-400">
+        POS Abarrotes <span className="text-blue-300">Nuevo</span>
       </h1>
 
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-120px)]">
+      <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-120px)] flex-1">
         {/* Columna Principal (Izquierda) - Product Grid */}
         <ProductGrid
           products={productsForSale}
           categories={categoryNames}
-          currentCategory={currentCategory}
+          currentCategory={searchTerm || 'Todo'}
           searchQuery={searchTerm}
           onProductSelect={handleProductSelect}
-          onCategoryChange={setCurrentCategory}
+          onCategoryChange={(category) => setSearchTerm(category === 'Todo' ? '' : category)}
           onSearchQueryChange={setSearchTerm}
           onOpenCalculator={() => setIsCalculatorModalOpen(true)}
           onOpenCatalog={() => setIsProductCollectionModalOpen(true)}
@@ -437,7 +430,7 @@ export default function POSPage() {
         />
 
         {/* Columna Lateral (Derecha) */}
-        <div className="flex flex-col lg:w-96 w-full space-y-4">
+        <div className="flex flex-col lg:w-96 w-full max-w-full space-y-4">
           {/* Módulo CartPanel */}
           <CartPanel
             cart={cart.map(item => ({
@@ -452,34 +445,47 @@ export default function POSPage() {
             selectedCartItem={selectedCartItem}
           />
 
-          {/* Botones adicionales */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          {/* Botones adicionales para funcionalidades faltantes */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              onClick={() => setIsCashClosingModalOpen(true)}
+              className="flex items-center justify-center space-x-2 p-2 sm:p-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm"
+              title="Cerrar Caja"
+            >
+              <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Caja</span>
+              <span className="sm:hidden">Caja</span>
+            </button>
+
             <button
               onClick={() => setIsScheduleVisitModalOpen(true)}
-              className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
+              className="flex items-center justify-center space-x-2 p-2 sm:p-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors text-sm"
+              title="Agenda"
             >
-              <Calendar size={14}/><span>Agendar</span>
+              <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Agenda</span>
+              <span className="sm:hidden">Age</span>
             </button>
+
             <button
-              onClick={() => setIsNoteModalOpen(true)}
-              className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
+              onClick={() => setIsWithdrawalModalOpen(true)}
+              className="flex items-center justify-center space-x-2 p-2 sm:p-3 bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors text-sm"
+              title="Retiro"
             >
-              <FileText size={14}/><span>Nota</span>
+              <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Retiro</span>
+              <span className="sm:hidden">Ret</span>
             </button>
+
             <button
               onClick={() => setIsDiscountModalOpen(true)}
-              className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
+              className="flex items-center justify-center space-x-2 p-2 sm:p-3 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-sm"
+              title="Descuento"
             >
-              <Percent size={14}/><span>Descuento</span>
+              <Percent className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Desc</span>
+              <span className="sm:hidden">D</span>
             </button>
-            {canAccessEmployeeConsumption && (
-              <button
-                onClick={() => setIsEmployeeConsumptionModalOpen(true)}
-                className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl border border-gray-600 transition-colors flex items-center justify-center space-x-1 text-sm"
-              >
-                <UserCircle size={14}/><span>Consumo</span>
-              </button>
-            )}
           </div>
 
           {/* Módulo Keypad */}
@@ -516,88 +522,89 @@ export default function POSPage() {
         />
       )}
 
-        {lastSale && (
-          <Modal isOpen={postPaymentModalOpen} onClose={() => setPostPaymentModalOpen(false)} title="Opciones de Ticket">
-            <div className="p-4">
-              <Ticket saleDetails={lastSale} />
-              <div className="flex justify-end space-x-4 mt-4">
-                <Button onClick={handlePrint} className="bg-blue-600 text-white hover:bg-blue-700">
-                  Imprimir Ticket
-                </Button>
-                <Button onClick={handleSaveTicket} className="bg-green-600 text-white hover:bg-green-700">
-                  Guardar Ticket
-                </Button>
-                <Button onClick={() => setPostPaymentModalOpen(false)} className="bg-gray-300 hover:bg-gray-400">
-                  Cerrar
-                </Button>
-              </div>
+      {/* Modals - Using existing modals for functionality */}
+      {lastSale && (
+        <Modal isOpen={postPaymentModalOpen} onClose={() => setPostPaymentModalOpen(false)} title="Opciones de Ticket">
+          <div className="p-4">
+            <Ticket saleDetails={lastSale} />
+            <div className="flex justify-end space-x-4 mt-4">
+              <Button onClick={handlePrint} className="bg-blue-600 text-white hover:bg-blue-700">
+                Imprimir Ticket
+              </Button>
+              <Button onClick={handleSaveTicket} className="bg-green-600 text-white hover:bg-green-700">
+                Guardar Ticket
+              </Button>
+              <Button onClick={() => setPostPaymentModalOpen(false)} className="bg-gray-300 hover:bg-gray-400">
+                Cerrar
+              </Button>
             </div>
-          </Modal>
-        )}
-
-        {canAccessEmployeeConsumption && (
-          <Modal isOpen={isEmployeeConsumptionModalOpen} onClose={() => setIsEmployeeConsumptionModalOpen(false)} title="Registrar Consumo de Empleados">
-            <EmployeeConsumptionModal onClose={() => setIsEmployeeConsumptionModalOpen(false)} />
-          </Modal>
-        )}
-
-        <Modal isOpen={isTicketDesignModalOpen} onClose={() => setIsTicketDesignModalOpen(false)} title="Editar Diseño de Ticket">
-          <TicketDesignModal onClose={() => setIsTicketDesignModalOpen(false)} />
+          </div>
         </Modal>
+      )}
 
-        <Modal isOpen={isCalculatorModalOpen} onClose={() => setIsCalculatorModalOpen(false)} title="Calculadora">
-          <CalculatorModal onClose={() => setIsCalculatorModalOpen(false)} />
+      {canAccessEmployeeConsumption && (
+        <Modal isOpen={isEmployeeConsumptionModalOpen} onClose={() => setIsEmployeeConsumptionModalOpen(false)} title="Registrar Consumo de Empleados">
+          <EmployeeConsumptionModal onClose={() => setIsEmployeeConsumptionModalOpen(false)} />
         </Modal>
+      )}
 
-        <Modal isOpen={isDiscountModalOpen} onClose={() => setIsDiscountModalOpen(false)} title="Aplicar Descuento">
-          <DiscountModal onClose={() => setIsDiscountModalOpen(false)} />
-        </Modal>
+      <Modal isOpen={isTicketDesignModalOpen} onClose={() => setIsTicketDesignModalOpen(false)} title="Editar Diseño de Ticket">
+        <TicketDesignModal onClose={() => setIsTicketDesignModalOpen(false)} />
+      </Modal>
 
-        <Modal isOpen={isNoteModalOpen} onClose={() => setIsNoteModalOpen(false)} title="Añadir Nota a la Venta">
-          <NoteModal onClose={() => setIsNoteModalOpen(false)} />
-        </Modal>
+      <Modal isOpen={isCalculatorModalOpen} onClose={() => setIsCalculatorModalOpen(false)} title="Calculadora">
+        <CalculatorModal onClose={() => setIsCalculatorModalOpen(false)} />
+      </Modal>
 
-        <Modal isOpen={isPaymentMethodModalOpen} onClose={() => setIsPaymentMethodModalOpen(false)} title="Procesar Pago">
-          <PaymentModal
-            onClose={() => setIsPaymentMethodModalOpen(false)}
-            onPayment={handlePaymentSuccess}
-            total={cartTotal}
-          />
-        </Modal>
+      <Modal isOpen={isDiscountModalOpen} onClose={() => setIsDiscountModalOpen(false)} title="Aplicar Descuento">
+        <DiscountModal onClose={() => setIsDiscountModalOpen(false)} />
+      </Modal>
 
-        <Modal isOpen={isCashClosingModalOpen} onClose={() => setIsCashClosingModalOpen(false)} title="Cierre de Caja">
-          <CashClosingModal onClose={() => setIsCashClosingModalOpen(false)} />
-        </Modal>
+      <Modal isOpen={isNoteModalOpen} onClose={() => setIsNoteModalOpen(false)} title="Añadir Nota a la Venta">
+        <NoteModal onClose={() => setIsNoteModalOpen(false)} />
+      </Modal>
 
-        <Modal isOpen={isProductFormModalOpen} onClose={() => setIsProductFormModalOpen(false)} title="Añadir Producto">
-          <ProductFormModal onClose={() => setIsProductFormModalOpen(false)} />
-        </Modal>
-
-        <Modal isOpen={isPreviousSalesModalOpen} onClose={() => setIsPreviousSalesModalOpen(false)} title="Ventas Anteriores">
-          <PreviousSalesModal onClose={() => setIsPreviousSalesModalOpen(false)} />
-        </Modal>
-
-        <Modal isOpen={isScheduleVisitModalOpen} onClose={() => setIsScheduleVisitModalOpen(false)} title="Agendar Visita de Proveedor">
-          <ScheduleVisitModal onClose={() => setIsScheduleVisitModalOpen(false)} />
-        </Modal>
-
-        <Modal isOpen={isWithdrawalModalOpen} onClose={() => setIsWithdrawalModalOpen(false)} title="Retiro de Efectivo">
-          <WithdrawalModal onClose={() => setIsWithdrawalModalOpen(false)} />
-        </Modal>
-
-        <Modal isOpen={isProductCollectionModalOpen} onClose={() => setIsProductCollectionModalOpen(false)} title="Colección de Productos">
-          <ProductCollectionModal onClose={() => setIsProductCollectionModalOpen(false)} />
-        </Modal>
-
-        <WeightModal
-          isOpen={isWeightModalOpen}
-          onClose={closeWeightModal}
-          product={weighingProduct}
-          onAddToCart={(weight) => {
-            addToCartWithWeight(weighingProduct, weight);
-            closeWeightModal();
-          }}
+      <Modal isOpen={isPaymentMethodModalOpen} onClose={() => setIsPaymentMethodModalOpen(false)} title="Procesar Pago">
+        <PaymentModal
+          onClose={() => setIsPaymentMethodModalOpen(false)}
+          onPayment={handlePaymentSuccess}
+          total={cartTotal}
         />
+      </Modal>
+
+      <Modal isOpen={isCashClosingModalOpen} onClose={() => setIsCashClosingModalOpen(false)} title="Cierre de Caja">
+        <CashClosingModal onClose={() => setIsCashClosingModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={isProductFormModalOpen} onClose={() => setIsProductFormModalOpen(false)} title="Añadir Producto">
+        <ProductFormModal onClose={() => setIsProductFormModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={isPreviousSalesModalOpen} onClose={() => setIsPreviousSalesModalOpen(false)} title="Ventas Anteriores">
+        <PreviousSalesModal onClose={() => setIsPreviousSalesModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={isScheduleVisitModalOpen} onClose={() => setIsScheduleVisitModalOpen(false)} title="Agendar Visita de Proveedor">
+        <ScheduleVisitModal onClose={() => setIsScheduleVisitModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={isWithdrawalModalOpen} onClose={() => setIsWithdrawalModalOpen(false)} title="Retiro de Efectivo">
+        <WithdrawalModal onClose={() => setIsWithdrawalModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={isProductCollectionModalOpen} onClose={() => setIsProductCollectionModalOpen(false)} title="Colección de Productos">
+        <ProductCollectionModal onClose={() => setIsProductCollectionModalOpen(false)} />
+      </Modal>
+
+      <WeightModal
+        isOpen={isWeightModalOpen}
+        onClose={closeWeightModal}
+        product={weighingProduct}
+        onAddToCart={(weight) => {
+          addToCartWithWeight(weighingProduct, weight);
+          closeWeightModal();
+        }}
+      />
     </div>
   );
 }

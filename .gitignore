@@ -1,13 +1,76 @@
-.env
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Production builds
 dist/
-.env.local
+dev-dist/
+
+# Environment variables
+.env*
+!.env.example
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
 .DS_Store
-*.log
-*.backup
-.qwen/
-.gemini/
-.genkit/
-test-results/
-playwright-report/
+Thumbs.db
+
+# Logs
 logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like Istanbul
+coverage/
+.nyc_output/
+
+# Temporary folders
+tmp/
+temp/
+
+# Build outputs
+build/
+.output/
+
+# Testing
+coverage/
+lib-cov/
+*.lcov
+
+# Documentation
+docs/
+
+# Git reports
+jscpd-report.json/
+
+# Local development
+check_*.js
+seed_*.js
+test_*.js
+simulate_*.js
+complete_*.js
+system_info.js
+verify_*.js
+
+# Genkit files
+.genkit/
+
+# Vite
+.vite/
+
+# Database
+*.db
+*.db-journal

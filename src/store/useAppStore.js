@@ -1390,7 +1390,7 @@ const useAppStore = create((set, get) => ({
     footerText: 'Vuelve pronto.',
     showQrCode: true,
     fontSize: 'base',
-    logoUrl: '',
+    logoUrl: '/logo192.png',
   },
 
   updateTicketSettings: (newSettings) => {

@@ -137,58 +137,114 @@ const functions = [
   }
 ];
 
-/**
- * Parse natural language query using OpenAI function calling
- * @param {string} query - The natural language query from the user
- * @returns {object} - The parsed intent and parameters
- */
-export async function parseNaturalLanguageQuery(query) {
-  if (!openai) {
-    // Fallback: use simple pattern matching if OpenAI API is not configured
-    const lowerQuery = query.toLowerCase();
+function _parseQueryWithPatternMatching(query) {
+  const lowerQuery = query.toLowerCase();
 
-    // Extract location if mentioned
-    let location = null;
-    if (lowerQuery.includes('tienda 1') || lowerQuery.includes('store 1') || lowerQuery.includes('ubicación tienda1')) {
-      location = 'tienda1';
-    } else if (lowerQuery.includes('tienda 2') || lowerQuery.includes('store 2') || lowerQuery.includes('ubicación tienda2')) {
-      location = 'tienda2';
-    } else if (lowerQuery.includes('bodega central') || lowerQuery.includes('warehouse') || lowerQuery.includes('ubicación bodega')) {
-      location = 'bodega-central';
-    }
+  // Extract location if mentioned
+  let location = null;
+  if (lowerQuery.includes('tienda 1') || lowerQuery.includes('store 1') || lowerQuery.includes('ubicación tienda1')) {
+    location = 'tienda1';
+  } else if (lowerQuery.includes('tienda 2') || lowerQuery.includes('store 2') || lowerQuery.includes('ubicación tienda2')) {
+    location = 'tienda2';
+  } else if (lowerQuery.includes('bodega central') || lowerQuery.includes('warehouse') || lowerQuery.includes('ubicación bodega')) {
+    location = 'bodega-central';
+  }
 
-    // Check for inventory queries
-    if (lowerQuery.includes('inventario') || lowerQuery.includes('existencias') || lowerQuery.includes('stock')) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
+  // Check for inventory queries
+  if (lowerQuery.includes('inventario') || lowerQuery.includes('existencias') || lowerQuery.includes('stock')) {
+    // Extract category if mentioned (using dynamic categories)
+    const categoryRegex = createCategoryRegexSync();
+    const categoryMatch = lowerQuery.match(categoryRegex);
+    const category = categoryMatch ? categoryMatch[1] : null;
 
+    return {
+      type: 'getInventoryReport',
+      category: category || null,
+      location: location || null
+    };
+  }
+
+  // Check for date references in the query first to determine if it's a specific date query
+  const dateRange = parseDateReference(query);
+  
+  // Check if the user is asking for specific sales data for a day/range without comparison
+  const isSpecificSalesQuery = lowerQuery.includes('fueron las ventas') || 
+                              lowerQuery.includes('fue la venta') || 
+                              lowerQuery.includes('venta de') ||
+                              lowerQuery.includes('ventas de') ||
+                              lowerQuery.includes('total de ventas') ||
+                              lowerQuery.includes('venta total');
+  
+  // If it's a specific sales query with a date, we should use getSalesForCategory instead of comparison
+  if (isSpecificSalesQuery && dateRange) {
+    // Extract category if mentioned (using dynamic categories)
+    const categoryRegex = createCategoryRegexSync();
+    const categoryMatch = lowerQuery.match(categoryRegex);
+    const category = categoryMatch ? categoryMatch[1] : null;
+    
+    return {
+      type: 'getSalesForCategory',
+      category: category || null,
+      dateRange: {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      }
+    };
+  }
+  
+  // Check for sales queries
+  if (lowerQuery.includes('venta') || lowerQuery.includes('ventas')) {
+    // Extract category if mentioned (using dynamic categories)
+    const categoryRegex = createCategoryRegexSync();
+    const categoryMatch = lowerQuery.match(categoryRegex);
+    const category = categoryMatch ? categoryMatch[1] : null;
+
+    // If date range is specified, return comparison
+    if (dateRange) {
+      // Calculate previous period based on the current period
+      const previousPeriod = calculatePreviousPeriod(dateRange);
+      
+      // Return sales comparison for the specified date range
       return {
-        type: 'getInventoryReport',
+        type: 'getSalesComparison',
         category: category || null,
-        location: location || null
+        currentPeriod: {
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        },
+        previousPeriod: previousPeriod
+      };
+    } else {
+      // Default to last 7 days if no specific date range is mentioned
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 7);
+      
+      const currentPeriod = {
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate)
+      };
+      
+      const previousPeriod = calculatePreviousPeriod(currentPeriod);
+      
+      return {
+        type: 'getSalesComparison',
+        category: category || 'lacteos',
+        currentPeriod: currentPeriod,
+        previousPeriod: previousPeriod
       };
     }
+  }
 
-    // Check for date references in the query first to determine if it's a specific date query
-    const dateRange = parseDateReference(query);
+  // Check if the query includes date references but not specifically about sales comparison
+  if (dateRange && !lowerQuery.includes('comparación')) {
+    // Extract category if mentioned (using dynamic categories)
+    const categoryRegex = createCategoryRegexSync();
+    const categoryMatch = lowerQuery.match(categoryRegex);
+    const category = categoryMatch ? categoryMatch[1] : null;
     
-    // Check if the user is asking for specific sales data for a day/range without comparison
-    const isSpecificSalesQuery = lowerQuery.includes('fueron las ventas') || 
-                                lowerQuery.includes('fue la venta') || 
-                                lowerQuery.includes('venta de') ||
-                                lowerQuery.includes('ventas de') ||
-                                lowerQuery.includes('total de ventas') ||
-                                lowerQuery.includes('venta total');
-    
-    // If it's a specific sales query with a date, we should use getSalesForCategory instead of comparison
-    if (isSpecificSalesQuery && dateRange) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
-      
+    // If it's a specific sales query, use getSalesForCategory
+    if (isSpecificSalesQuery) {
       return {
         type: 'getSalesForCategory',
         category: category || null,
@@ -197,103 +253,51 @@ export async function parseNaturalLanguageQuery(query) {
           endDate: dateRange.endDate
         }
       };
-    }
-    
-    // Check for sales queries
-    if (lowerQuery.includes('venta') || lowerQuery.includes('ventas')) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
-
-      // If date range is specified, return comparison
-      if (dateRange) {
-        // Calculate previous period based on the current period
-        const previousPeriod = calculatePreviousPeriod(dateRange);
-        
-        // Return sales comparison for the specified date range
-        return {
-          type: 'getSalesComparison',
-          category: category || null,
-          currentPeriod: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          },
-          previousPeriod: previousPeriod
-        };
-      } else {
-        // Default to last 7 days if no specific date range is mentioned
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 7);
-        
-        const currentPeriod = {
-          startDate: formatDate(startDate),
-          endDate: formatDate(endDate)
-        };
-        
-        const previousPeriod = calculatePreviousPeriod(currentPeriod);
-        
-        return {
-          type: 'getSalesComparison',
-          category: category || 'lacteos',
-          currentPeriod: currentPeriod,
-          previousPeriod: previousPeriod
-        };
-      }
-    }
-
-    // Check if the query includes date references but not specifically about sales comparison
-    if (dateRange && !lowerQuery.includes('comparación')) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
+    } else {
+      // Otherwise, default to comparison
+      const previousPeriod = calculatePreviousPeriod(dateRange);
       
-      // If it's a specific sales query, use getSalesForCategory
-      if (isSpecificSalesQuery) {
-        return {
-          type: 'getSalesForCategory',
-          category: category || null,
-          dateRange: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          }
-        };
-      } else {
-        // Otherwise, default to comparison
-        const previousPeriod = calculatePreviousPeriod(dateRange);
-        
-        return {
-          type: 'getSalesComparison',
-          category: category || null,
-          currentPeriod: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          },
-          previousPeriod: previousPeriod
-        };
-      }
+      return {
+        type: 'getSalesComparison',
+        category: category || null,
+        currentPeriod: {
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        },
+        previousPeriod: previousPeriod
+      };
     }
+  }
 
-    // Default return
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 7);
+  // Default return
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - 7);
 
-    const currentPeriod = {
-      startDate: formatDate(startDate),
-      endDate: formatDate(endDate)
-    };
+  const currentPeriod = {
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate)
+  };
 
-    const previousPeriod = calculatePreviousPeriod(currentPeriod);
+  const previousPeriod = calculatePreviousPeriod(currentPeriod);
 
-    return {
-      type: 'getSalesComparison',
-      category: 'lacteos',
-      currentPeriod: currentPeriod,
-      previousPeriod: previousPeriod
-    };
+  return {
+    type: 'getSalesComparison',
+    category: 'lacteos',
+    currentPeriod: currentPeriod,
+    previousPeriod: previousPeriod
+  };
+}
+
+/**
+ * Parse natural language query using OpenAI function calling
+ * @param {string} query - The natural language query from the user
+ * @returns {object} - The parsed intent and parameters
+ */
+export async function parseNaturalLanguageQuery(query) {
+  if (!openai) {
+    // Fallback: use simple pattern matching if OpenAI API is not configured
+    return _parseQueryWithPatternMatching(query);
   }
 
   try {
@@ -350,154 +354,6 @@ export async function parseNaturalLanguageQuery(query) {
     console.error('Error calling OpenAI API:', error);
 
     // Fallback: use simple pattern matching if AI API fails
-    const lowerQuery = query.toLowerCase();
-
-    // Extract location if mentioned
-    let location = null;
-    if (lowerQuery.includes('tienda 1') || lowerQuery.includes('store 1') || lowerQuery.includes('ubicación tienda1')) {
-      location = 'tienda1';
-    } else if (lowerQuery.includes('tienda 2') || lowerQuery.includes('store 2') || lowerQuery.includes('ubicación tienda2')) {
-      location = 'tienda2';
-    } else if (lowerQuery.includes('bodega central') || lowerQuery.includes('warehouse') || lowerQuery.includes('ubicación bodega')) {
-      location = 'bodega-central';
-    }
-
-    // Check for inventory queries
-    if (lowerQuery.includes('inventario') || lowerQuery.includes('existencias') || lowerQuery.includes('stock')) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
-
-      return {
-        type: 'getInventoryReport',
-        category: category || null,
-        location: location || null
-      };
-    }
-
-    // Check for date references in the query first to determine if it's a specific date query
-    const dateRange = parseDateReference(query);
-    
-    // Check if the user is asking for specific sales data for a day/range without comparison
-    const isSpecificSalesQuery = lowerQuery.includes('fueron las ventas') || 
-                                lowerQuery.includes('fue la venta') || 
-                                lowerQuery.includes('venta de') ||
-                                lowerQuery.includes('ventas de') ||
-                                lowerQuery.includes('total de ventas') ||
-                                lowerQuery.includes('venta total');
-    
-    // If it's a specific sales query with a date, we should use getSalesForCategory instead of comparison
-    if (isSpecificSalesQuery && dateRange) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
-      
-      return {
-        type: 'getSalesForCategory',
-        category: category || null,
-        dateRange: {
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate
-        }
-      };
-    }
-    
-    // Check for sales queries
-    if (lowerQuery.includes('venta') || lowerQuery.includes('ventas')) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
-
-      // If date range is specified, return comparison
-      if (dateRange) {
-        // Calculate previous period based on the current period
-        const previousPeriod = calculatePreviousPeriod(dateRange);
-        
-        // Return sales comparison for the specified date range
-        return {
-          type: 'getSalesComparison',
-          category: category || null,
-          currentPeriod: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          },
-          previousPeriod: previousPeriod
-        };
-      } else {
-        // Default to last 7 days if no specific date range is mentioned
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 7);
-        
-        const currentPeriod = {
-          startDate: formatDate(startDate),
-          endDate: formatDate(endDate)
-        };
-        
-        const previousPeriod = calculatePreviousPeriod(currentPeriod);
-        
-        return {
-          type: 'getSalesComparison',
-          category: category || 'lacteos',
-          currentPeriod: currentPeriod,
-          previousPeriod: previousPeriod
-        };
-      }
-    }
-
-    // Check if the query includes date references but not specifically about sales comparison
-    if (dateRange && !lowerQuery.includes('comparación')) {
-      // Extract category if mentioned (using dynamic categories)
-      const categoryRegex = createCategoryRegexSync();
-      const categoryMatch = lowerQuery.match(categoryRegex);
-      const category = categoryMatch ? categoryMatch[1] : null;
-      
-      // If it's a specific sales query, use getSalesForCategory
-      if (isSpecificSalesQuery) {
-        return {
-          type: 'getSalesForCategory',
-          category: category || null,
-          dateRange: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          }
-        };
-      } else {
-        // Otherwise, default to comparison
-        const previousPeriod = calculatePreviousPeriod(dateRange);
-        
-        return {
-          type: 'getSalesComparison',
-          category: category || null,
-          currentPeriod: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          },
-          previousPeriod: previousPeriod
-        };
-      }
-    }
-
-    // Default return
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 7);
-
-    const currentPeriod = {
-      startDate: formatDate(startDate),
-      endDate: formatDate(endDate)
-    };
-
-    const previousPeriod = calculatePreviousPeriod(currentPeriod);
-
-    return {
-      type: 'getSalesComparison',
-      category: 'lacteos',
-      currentPeriod: currentPeriod,
-      previousPeriod: previousPeriod
-    };
+    return _parseQueryWithPatternMatching(query);
   }
 }

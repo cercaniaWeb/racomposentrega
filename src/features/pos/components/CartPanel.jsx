@@ -14,13 +14,10 @@ const CartPanel = React.memo(({
   onItemClick,
   selectedCartItem,
 }) => {
-  // Lógica Interna: Cálculo de Totales (13% fijo)
-  const { subtotal, taxAmount, total } = useMemo(() => {
+  // Lógica Interna: Cálculo de Totales (sin impuestos)
+  const { subtotal, total } = useMemo(() => {
     const sub = cart.reduce((acc, item) => acc + item.total, 0);
-    const TAX_RATE = 0.13;
-    const tax = sub * TAX_RATE;
-    const tot = sub + tax;
-    return { subtotal: sub, taxAmount: tax, total: tot };
+    return { subtotal: sub, total: sub };
   }, [cart]);
 
   const cartIsEmpty = cart.length === 0;
@@ -107,10 +104,6 @@ const CartPanel = React.memo(({
         <div className="flex justify-between text-gray-300">
           <span>Subtotal:</span>
           <span className="font-medium">${subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-gray-300">
-          <span>Impuestos (13%):</span>
-          <span className="font-medium">${taxAmount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between pt-2 border-t border-gray-700">
           <span className="text-2xl font-bold text-white">TOTAL:</span>

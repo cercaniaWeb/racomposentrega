@@ -29,7 +29,6 @@ const ProductForm = ({ product, onClose, onSuccess, mode = 'modal', onSave }) =>
     supplierId: '', // Supplier ID
     weight: 0, // Product weight
     dimensions: { length: 0, width: 0, height: 0 }, // Product dimensions
-    taxRate: 0, // Tax rate percentage
     isActive: true, // Whether the product is active
     notes: '' // Additional notes
   });
@@ -58,7 +57,6 @@ const ProductForm = ({ product, onClose, onSuccess, mode = 'modal', onSave }) =>
         supplierId: product.supplierId || '',
         weight: product.weight || 0,
         dimensions: product.dimensions || { length: 0, width: 0, height: 0 },
-        taxRate: product.taxRate || 0,
         isActive: product.isActive !== undefined ? product.isActive : true,
         notes: product.notes || ''
       });
@@ -98,7 +96,6 @@ const ProductForm = ({ product, onClose, onSuccess, mode = 'modal', onSave }) =>
         supplierId: '',
         weight: 0,
         dimensions: { length: 0, width: 0, height: 0 },
-        taxRate: 0,
         isActive: true,
         notes: ''
       });
@@ -556,20 +553,6 @@ const ProductForm = ({ product, onClose, onSuccess, mode = 'modal', onSave }) =>
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-[#a0a0b0] mb-1">Tasa de Impuesto (%)</label>
-                <input
-                  type="number"
-                  name="taxRate"
-                  value={formData.taxRate}
-                  onChange={handleChange}
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  className="w-full bg-[#1D1D27] text-[#F0F0F0] border border-[#3a3a4a] rounded-lg px-3 py-2 focus:border-[#8A2BE2] outline-none transition-colors"
-                  data-testid="product-taxrate-input"
-                />
-              </div>
               
               <div className="flex items-center pt-6">
                 <input
