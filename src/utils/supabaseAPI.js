@@ -1190,13 +1190,23 @@ export const initializeSupabaseCollections = async () => {
 
       for (const cat of defaultCategories) {
         try {
-          await addCategory({
-            ...cat,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+          // Intentar crear categoría con manejo de errores específico
+          const { data, error } = await supabase
+            .from('categories')
+            .insert([{
+              ...cat,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
+          if (error) {
+            // Este error es común si las políticas de RLS no permiten al usuario actual crear categorías
+            console.warn('Advertencia: No se pudo crear categoría por defecto. Esto es normal si las políticas de seguridad están configuradas.', error.message);
+          }
         } catch (err) {
-          console.error('Error agregando categoría por defecto:', err);
+          console.warn('Advertencia al crear categoría por defecto:', err.message);
         }
       }
     }
