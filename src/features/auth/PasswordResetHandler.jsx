@@ -14,13 +14,15 @@ const PasswordResetHandler = () => {
 
   // Verificar si es un enlace de restablecimiento o verificación
   useEffect(() => {
-    // Obtener los parámetros de búsqueda y hash
-    const type = searchParams.get('type');
-    const token = searchParams.get('token');
+    // Obtener los parámetros de búsqueda
+    const searchType = searchParams.get('type');
+    const searchToken = searchParams.get('token');
 
-    // Obtener también parámetros del hash (después de #)
+    // Obtener también parámetros del hash (después de #), que es donde Supabase
+    // coloca típicamente los parámetros de autenticación
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const hashType = hashParams.get('type');
+    const hashToken = hashParams.get('token'); // Supabase también puede enviar el token en el hash
     const hashError = hashParams.get('error');
     const hashErrorDescription = hashParams.get('error_description');
 
@@ -33,13 +35,13 @@ const PasswordResetHandler = () => {
       return;
     }
 
-    // Priorizar parámetros del hash si están presentes
-    const finalType = hashType || type;
-    const finalToken = searchParams.get('token'); // El token normalmente viene en search params, no en hash
+    // Usar los parámetros del hash como prioridad (más comunes en Supabase)
+    const type = hashType || searchType;
+    const token = hashToken || searchToken; // El token puede estar en hash o en search params
 
-    if (finalType === 'recovery' && finalToken) {
+    if (type === 'recovery' && token) {
       setIsRecovery(true);
-    } else if ((finalType === 'email' || finalType === 'signup') && finalToken) {
+    } else if ((type === 'email' || type === 'signup') && token) {
       setIsVerification(true);
     }
     // Si no hay tipo o token, o son inválidos, se mostrará el estado de acción no válida
