@@ -14,21 +14,32 @@ const PasswordResetHandler = () => {
 
   // Verificar si es un enlace de restablecimiento o verificación
   useEffect(() => {
+    // Obtener los parámetros de búsqueda y hash
     const type = searchParams.get('type');
     const token = searchParams.get('token');
 
-    // Verificar también si hay un parámetro de error
-    const error = searchParams.get('error');
-    const errorDescription = searchParams.get('error_description');
+    // Obtener también parámetros del hash (después de #)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashType = hashParams.get('type');
+    const hashError = hashParams.get('error');
+    const hashErrorDescription = hashParams.get('error_description');
+
+    // Verificar también si hay un parámetro de error en searchParams o hash
+    const error = searchParams.get('error') || hashError;
+    const errorDescription = searchParams.get('error_description') || hashErrorDescription;
 
     if (error) {
       setMessage(`Error: ${errorDescription || 'El enlace no es válido o ha expirado.'}`);
       return;
     }
 
-    if (type === 'recovery' && token) {
+    // Priorizar parámetros del hash si están presentes
+    const finalType = hashType || type;
+    const finalToken = searchParams.get('token'); // El token normalmente viene en search params, no en hash
+
+    if (finalType === 'recovery' && finalToken) {
       setIsRecovery(true);
-    } else if ((type === 'email' || type === 'signup') && token) {
+    } else if ((finalType === 'email' || finalType === 'signup') && finalToken) {
       setIsVerification(true);
     }
     // Si no hay tipo o token, o son inválidos, se mostrará el estado de acción no válida
