@@ -56,14 +56,10 @@ docs/
 # Git reports
 jscpd-report.json/
 
-# Local development
-check_*.js
-seed_*.js
-test_*.js
-simulate_*.js
-complete_*.js
-system_info.js
-verify_*.js
+# Local development files
+*.js
+!src/**/*.js
+!public/**/*.js
 
 # Genkit files
 .genkit/
@@ -74,3 +70,7 @@ verify_*.js
 # Database
 *.db
 *.db-journal
+
+# System files
+.DS_Store
+Thumbs.db
