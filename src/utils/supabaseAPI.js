@@ -362,23 +362,62 @@ export const getUser = async (id) => {
 export const addUser = async (userData) => {
   const { password, ...userProperties } = userData;
 
-  // Si se proporciona una contraseña, crear el usuario en Supabase Auth usando el Admin API
-  if (password) {
-    // Crear usuario en Supabase Auth usando el API administrativo
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: userProperties.email,
-      password: password,
-      email_confirm: true, // Confirmar el email automáticamente para que pueda iniciar sesión inmediatamente
-    });
+  // Para crear usuarios con contraseña por primera vez, necesitamos usar signUp
+  // o invitar usuarios si se dispone de una service role key en backend
+  try {
+    let userId;
 
-    if (authError) {
-      console.error('Error creando usuario en Supabase Auth:', authError);
-      throw new Error(`Error creando usuario: ${authError.message}`);
+    // Si se proporciona una contraseña, crear el usuario en Supabase Auth
+    if (password) {
+      // Para crear usuarios directamente con contraseña (útil para el proceso de registro)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userProperties.email,
+        password: password,
+      });
+
+      if (authError) {
+        console.error('Error creando usuario en Supabase Auth:', authError);
+        throw new Error(`Error creando usuario: ${authError.message}`);
+      }
+
+      // Extraer el ID del usuario recién creado
+      userId = authData.user?.id || authData.user.id;
+
+      // Verificar si se proporciona un refresh token para confirmar que el usuario está autenticado
+      // y actualizar sus datos en la tabla personalizada
+      if (!userId) {
+        throw new Error("No se pudo obtener el ID del usuario recién creado");
+      }
+    } else {
+      // Si no se proporciona contraseña, solo creamos el registro en la tabla personalizada
+      // En este caso, el usuario deberá ser invitado usando otro método
+      console.warn('Se intentó crear un usuario sin contraseña. Esto limitará su capacidad de inicio de sesión.');
+
+      // Mapear campos de camelCase a snake_case para la base de datos
+      const { storeId, ...otherProps } = userProperties;
+      const userDataToInsert = {
+        ...otherProps,
+        role: otherProps.role || 'cajera', // Asegurarse de que tenga un rol por defecto
+        store_id: storeId || null, // Mapear a snake_case
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('users')
+        .insert([userDataToInsert])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error agregando usuario:', error);
+        throw new Error(error.message);
+      }
+
+      return data.id;
     }
 
-    // Extraer el ID del usuario recién creado
-    const userId = authData.user.id;
-
+    // Si tenemos un userId, ahora actualizamos su perfil en nuestra tabla personalizada
     // Mapear campos de camelCase a snake_case para la base de datos
     const { storeId, ...otherProps } = userProperties;
     const userDataToInsert = {
@@ -397,37 +436,16 @@ export const addUser = async (userData) => {
       .single();
 
     if (error) {
-      // Si falla la inserción en la tabla personalizada, eliminar el usuario de Auth
-      await supabase.auth.admin.deleteUser(userId);
+      // Si falla la inserción en la tabla personalizada, no eliminamos el usuario de Auth
+      // ya que el proceso de autenticación ya se realizó
       console.error('Error agregando usuario a la tabla personalizada:', error);
       throw new Error(error.message);
     }
 
     return userId;
-  } else {
-    console.warn('Se intentó crear un usuario sin contraseña. Esto limitará su capacidad de inicio de sesión.');
-    // Mapear campos de camelCase a snake_case para la base de datos
-    const { storeId, ...otherProps } = userProperties;
-    const userDataToInsert = {
-      ...otherProps,
-      role: otherProps.role || 'cajera', // Asegurarse de que tenga un rol por defecto
-      store_id: storeId || null, // Mapear a snake_case
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const { data, error } = await supabase
-      .from('users')
-      .insert([userDataToInsert])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error agregando usuario:', error);
-      throw new Error(error.message);
-    }
-
-    return data.id;
+  } catch (error) {
+    console.error('Error en addUser:', error);
+    throw error;
   }
 };
 
