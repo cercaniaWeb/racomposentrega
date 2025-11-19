@@ -34,7 +34,7 @@ const Router = () => {
         <Route path="/receipt" element={<ReceiptPage />} />
 
         <Route path="/pos/:storeId" element={
-          <ProtectedRoute roles={['cajera', 'gerente', 'admin']}>
+          <ProtectedRoute roles={['cajera', 'gerente', 'admin', 'dev']}>
             <Layout activeModule="pos">
               <POSPage />
             </Layout>
@@ -42,7 +42,7 @@ const Router = () => {
         } />
         
         <Route path="/reports" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="reports">
               <ReportsPage />
             </Layout>
@@ -50,14 +50,14 @@ const Router = () => {
         } />
         
         <Route path="/transfers" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="transfers">
               <TransfersPage />
             </Layout>
           </ProtectedRoute>
         } />
         <Route path="/transfers/:id" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="transfers">
               <TransferDetailsPage />
             </Layout>
@@ -65,7 +65,7 @@ const Router = () => {
         } />
         
         <Route path="/expenses" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="expenses">
               <ExpensesPage />
             </Layout>
@@ -73,7 +73,7 @@ const Router = () => {
         } />
         
         <Route path="/users" element={
-          <ProtectedRoute roles={['admin']}>
+          <ProtectedRoute roles={['admin', 'dev']}>
             <Layout activeModule="users">
               <UsersPage />
             </Layout>
@@ -81,7 +81,7 @@ const Router = () => {
         } />
         
         <Route path="/clients" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="clients">
               <ClientsPage />
             </Layout>
@@ -89,7 +89,7 @@ const Router = () => {
         } />
         
         <Route path="/settings" element={
-          <ProtectedRoute roles={['admin', 'gerente']}>
+          <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
             <Layout activeModule="settings">
               <SettingsPage />
             </Layout>
@@ -97,7 +97,7 @@ const Router = () => {
         } />
         
         <Route path="/inventory" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="inventory">
               <InventoryPage />
             </Layout>
@@ -105,7 +105,7 @@ const Router = () => {
         } />
         
         <Route path="/products" element={
-          <ProtectedRoute roles={['gerente', 'admin']}>
+          <ProtectedRoute roles={['gerente', 'admin', 'dev']}>
             <Layout activeModule="products">
               <ProductsPage />
             </Layout>
@@ -113,7 +113,7 @@ const Router = () => {
         } />
         
         <Route path="/admin" element={
-          <ProtectedRoute roles={['admin', 'gerente']}>
+          <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
             <Layout>
               <AdminDashboardPage />
             </Layout>
@@ -121,63 +121,63 @@ const Router = () => {
         }>
           <Route index element={<Navigate to="pos" />} />
           <Route path="pos" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="pos">
                 <POSPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="products" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="products">
                 <ProductsPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="inventory" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="inventory">
                 <InventoryPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="reports" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="reports">
                 <ReportsPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="users" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="users">
                 <UsersPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="transfers" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="transfers">
                 <TransfersPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="expenses" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="expenses">
                 <ExpensesPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="settings" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="settings">
                 <SettingsPage />
               </Layout>
             </ProtectedRoute>
           } />
           <Route path="clients" element={
-            <ProtectedRoute roles={['admin', 'gerente']}>
+            <ProtectedRoute roles={['admin', 'gerente', 'dev']}>
               <Layout activeModule="clients">
                 <ClientsPage />
               </Layout>
