@@ -63,10 +63,10 @@ Para desplegar en Netlify, debes configurar las variables de entorno en la confi
 1. Ve a tu sitio en Netlify
 2. Navega a `Settings` > `Build & deploy` > `Environment`
 3. Agrega las siguientes variables:
-   - `VITE_SUPABASE_URL`: Tu URL de Supabase
-   - `VITE_SUPABASE_ANON_KEY`: Tu clave anónima de Supabase
+   - `VITE_SUPABASE_URL`: Tu URL de Supabase (formato: https://[id].supabase.co)
+   - `VITE_SUPABASE_ANON_KEY`: Tu clave anónima de Supabase (puedes encontrarla en tu proyecto de Supabase > Authentication > API)
 
-También puedes crear un archivo `.env.example` como plantilla (como se incluye en este proyecto) para saber qué variables son necesarias.
+> **Importante:** Estas variables deben tener el prefijo `VITE_` para que Vite las incluya en el bundle del frontend.
 
 ---
 
