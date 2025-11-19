@@ -417,14 +417,14 @@ export const addUser = async (userData) => {
       return data.id;
     }
 
-    // Si tenemos un userId, ahora actualizamos su perfil en nuestra tabla personalizada
+    // Si tenemos un userId, ahora creamos su perfil en nuestra tabla personalizada
     // Mapear campos de camelCase a snake_case para la base de datos
-    const { storeId, ...otherProps } = userProperties;
+    const { storeId, storeIds, ...otherProps } = userProperties;
     const userDataToInsert = {
       id: userId,  // Usar el ID de Supabase Auth
       ...otherProps,
       role: otherProps.role || 'cajera', // Asegurarse de que tenga un rol por defecto
-      store_id: storeId || null, // Mapear a snake_case
+      store_id: storeId || null, // Mapear a snake_case - mantener para compatibilidad
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -440,6 +440,30 @@ export const addUser = async (userData) => {
       // ya que el proceso de autenticación ya se realizó
       console.error('Error agregando usuario a la tabla personalizada:', error);
       throw new Error(error.message);
+    }
+
+    // Si se proporcionaron múltiples tiendas (storeIds), crear las relaciones en la tabla intermedia
+    if (storeIds && Array.isArray(storeIds) && storeIds.length > 0) {
+      try {
+        // Crear entradas en la tabla de relación usuario-tiendas (user_stores o similar)
+        // Nota: Esta tabla debe existir en tu base de datos
+        const storeRelationships = storeIds.map(storeId => ({
+          user_id: userId,
+          store_id: storeId,
+          assigned_at: new Date().toISOString()
+        }));
+
+        const { error: relationshipError } = await supabase
+          .from('user_stores')  // Suponiendo que esta tabla intermedia existe
+          .insert(storeRelationships);
+
+        if (relationshipError) {
+          console.error('Error asignando usuario a múltiples tiendas:', relationshipError);
+          // No lanzamos error aquí para no afectar la creación principal del usuario
+        }
+      } catch (relError) {
+        console.warn('Advertencia: No se pudieron asignar múltiples tiendas al usuario:', relError.message);
+      }
     }
 
     return userId;
@@ -458,7 +482,7 @@ const hashPassword = async (password) => {
 };
 
 export const updateUser = async (id, userData) => {
-  const { password, ...userProperties } = userData;
+  const { password, storeIds, ...userProperties } = userData;
 
   // Mapear campos de camelCase a snake_case para la base de datos
   const { storeId, ...otherProps } = userProperties;
@@ -480,19 +504,49 @@ export const updateUser = async (id, userData) => {
     throw new Error(error.message);
   }
 
+  // Si se proporcionan múltiples tiendas, actualizar la tabla intermedia
+  if (storeIds && Array.isArray(storeIds)) {
+    try {
+      // Primero eliminar todas las relaciones existentes para este usuario
+      await supabase
+        .from('user_stores')
+        .delete()
+        .match({ user_id: id });
+
+      // Luego insertar las nuevas relaciones si hay tiendas
+      if (storeIds.length > 0) {
+        const storeRelationships = storeIds.map(storeId => ({
+          user_id: id,
+          store_id: storeId,
+          assigned_at: new Date().toISOString()
+        }));
+
+        const { error: relationshipError } = await supabase
+          .from('user_stores')
+          .insert(storeRelationships);
+
+        if (relationshipError) {
+          console.error('Error actualizando asignación de usuario a múltiples tiendas:', relationshipError);
+        }
+      }
+    } catch (relError) {
+      console.warn('Advertencia: No se pudieron actualizar múltiples tiendas del usuario:', relError.message);
+    }
+  }
+
   // Si se proporciona una nueva contraseña y es para el usuario actual, actualizarla
   if (password) {
     // Solo se permite cambiar la contraseña actual si es el mismo usuario
     // Para cambiar contraseña de otro usuario, se debe usar un proceso de backend
     // o enviar un correo de restablecimiento de contraseña
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (session?.user?.id === id) {
       // El usuario actual está actualizando su propia contraseña
       const { error: authError } = await supabase.auth.updateUser({
         password: password
       });
-      
+
       if (authError) {
         console.error("Error actualizando contraseña en Supabase Auth:", authError);
         throw authError; // Lanzar el error para que el UI lo maneje
@@ -505,7 +559,7 @@ export const updateUser = async (id, userData) => {
         .select('email')
         .eq('id', id)
         .single();
-      
+
       if (userData?.email) {
         // Enviar un correo de restablecimiento de contraseña
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(userData.email);
