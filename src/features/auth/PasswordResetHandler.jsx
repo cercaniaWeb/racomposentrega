@@ -16,7 +16,16 @@ const PasswordResetHandler = () => {
   useEffect(() => {
     const type = searchParams.get('type');
     const token = searchParams.get('token');
-    
+
+    // Verificar también si hay un parámetro de error
+    const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
+
+    if (error) {
+      setMessage(`Error: ${errorDescription || 'El enlace no es válido o ha expirado.'}`);
+      return;
+    }
+
     if (type === 'recovery' && token) {
       setIsRecovery(true);
     } else if ((type === 'email' || type === 'signup') && token) {
@@ -74,7 +83,7 @@ const PasswordResetHandler = () => {
           type: 'signup',
           email,
           options: {
-            emailRedirectTo: 'http://localhost:5173'
+            emailRedirectTo: window.location.origin
           }
         });
 
@@ -92,23 +101,23 @@ const PasswordResetHandler = () => {
   if (isRecovery) {
     // Formulario para restablecer contraseña
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-[#1D1D27] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-[#F0F0F0]">
               Restablecer Contraseña
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-[#a0a0b0]">
               Ingresa tu nueva contraseña
             </p>
           </div>
-          
+
           {message && (
-            <div className={`mb-6 p-4 rounded-md ${message.includes('éxito') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+            <div className={`mb-6 p-4 rounded-md ${message.includes('éxito') ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
               {message}
             </div>
           )}
-          
+
           <form className="mt-8 space-y-6" onSubmit={handlePasswordReset}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
@@ -120,7 +129,7 @@ const PasswordResetHandler = () => {
                   name="newPassword"
                   type="password"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-[#3a3a4a] placeholder-[#a0a0b0] text-[#F0F0F0] bg-[#2c2c2c] rounded-t-md focus:outline-none focus:ring-[#8A2BE2] focus:border-[#8A2BE2] focus:z-10 sm:text-sm"
                   placeholder="Nueva contraseña"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -135,7 +144,7 @@ const PasswordResetHandler = () => {
                   name="confirmPassword"
                   type="password"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-[#3a3a4a] placeholder-[#a0a0b0] text-[#F0F0F0] bg-[#2c2c2c] rounded-b-md focus:outline-none focus:ring-[#8A2BE2] focus:border-[#8A2BE2] focus:z-10 sm:text-sm"
                   placeholder="Confirmar contraseña"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -147,17 +156,17 @@ const PasswordResetHandler = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#8A2BE2] hover:bg-[#7b1fa2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8A2BE2] disabled:opacity-50"
               >
                 {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
               </button>
             </div>
-            
+
             <div className="text-center mt-4">
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-blue-600 hover:text-blue-800 text-sm"
+                className="text-[#8A2BE2] hover:text-[#7b1fa2] text-sm"
               >
                 Volver al login
               </button>
@@ -171,25 +180,25 @@ const PasswordResetHandler = () => {
   if (isVerification) {
     // Mensaje para verificación de email
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-[#1D1D27] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-[#F0F0F0]">
               Verificación de Email
             </h2>
           </div>
-          
+
           <div className="mt-8 space-y-6">
-            <div className="bg-blue-50 p-4 rounded-md">
-              <p className="text-blue-800">
+            <div className="bg-[#2c2c2c] p-4 rounded-md">
+              <p className="text-[#a0a0b0]">
                 Tu email ha sido verificado exitosamente. Ahora puedes iniciar sesión.
               </p>
             </div>
-            
+
             <div>
               <button
                 onClick={() => navigate('/login')}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#8A2BE2] hover:bg-[#7b1fa2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8A2BE2]"
               >
                 Iniciar Sesión
               </button>
@@ -202,27 +211,33 @@ const PasswordResetHandler = () => {
 
   // Si no es un enlace de recuperación o verificación
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#1D1D27] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Acción no válida
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-[#F0F0F0]">
+            {message ? 'Error en la recuperación' : 'Acción no válida'}
           </h2>
         </div>
-        
+
         <div className="mt-8 space-y-6">
-          <div className="bg-yellow-50 p-4 rounded-md">
-            <p className="text-yellow-800">
-              Este enlace no es válido o ya ha sido utilizado. Intenta iniciar sesión normalmente.
+          <div className="bg-[#2c2c2c] p-4 rounded-md">
+            <p className="text-[#a0a0b0]">
+              {message || 'Este enlace no es válido o ya ha sido utilizado. Intenta iniciar sesión normalmente.'}
             </p>
           </div>
-          
-          <div>
+
+          <div className="space-y-3">
             <button
               onClick={() => navigate('/login')}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#8A2BE2] hover:bg-[#7b1fa2] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8A2BE2]"
             >
               Ir al Login
+            </button>
+            <button
+              onClick={() => navigate('/forgot-password')}
+              className="w-full flex justify-center py-2 px-4 border border-[#3a3a4a] rounded-md shadow-sm text-sm font-medium text-[#F0F0F0] bg-[#2c2c2c] hover:bg-[#3a3a4a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8A2BE2]"
+            >
+              Intentar nuevamente
             </button>
           </div>
         </div>
